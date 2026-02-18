@@ -9,11 +9,11 @@ spring:
       routes:
         # Ruta para el Catálogo
         - id: catalog-service
-          uri: lb://CATALOG-SERVICE # "lb://" significa que use Load Balancer de Eureka
+          uri: lb://CATALOG-SERVICE
           predicates:
             - Path=/catalog/**
           filters:
-            - StripPrefix=1 # Quita el /catalog de la URL antes de enviarla al servicio
+            - StripPrefix=1
 
         # Ruta para las Reservas
         - id: booking-service
@@ -27,4 +27,4 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka/
