@@ -1,0 +1,3 @@
+com/ticket/system/payment/consumer/PaymentConsumer.class
+com/ticket/system/payment/config/RabbitMQConfig.class
+com/ticket/system/payment/PaymentApplication.class

@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    gateway:
+      routes:
+        # Ruta para el Catálogo
+        - id: catalog-service
+          uri: lb://CATALOG-SERVICE # "lb://" significa que use Load Balancer de Eureka
+          predicates:
+            - Path=/catalog/**
+          filters:
+            - StripPrefix=1 # Quita el /catalog de la URL antes de enviarla al servicio
+
+        # Ruta para las Reservas
+        - id: booking-service
+          uri: lb://BOOKING-SERVICE
+          predicates:
+            - Path=/booking/**
+          filters:
+            - StripPrefix=1
+
+# Configuración de Eureka Client
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
