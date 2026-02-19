@@ -36,13 +36,16 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponseDTO createBooking(BookingRequestDTO bookingRequest) {
         String stockKey = "event:stock:" + bookingRequest.getEventId();
 
+        // Obtener stock actual antes del decremento
+        String currentStockStr = redisTemplate.opsForValue().get(stockKey);
+        Long currentStock = currentStockStr != null ? Long.valueOf(currentStockStr) : 0L;
+
         // Operación atómica en Redis
         Long remainingStock = redisTemplate.opsForValue().decrement(stockKey, bookingRequest.getQuantity());
 
-        if (remainingStock == null || remainingStock < 0) {
+        if (remainingStock < 0) {
             redisTemplate.opsForValue().increment(stockKey, bookingRequest.getQuantity()); // Revertir decremento
-            throw new NotEnoughStockException(remainingStock != null ? remainingStock.intValue() : 0);
-            // Aquí es donde se lanza la excepción que el GlobalExceptionHandler capturará
+            throw new NotEnoughStockException(currentStock.intValue()); // Lanzar con stock original
         }
 
         // Guardamos
