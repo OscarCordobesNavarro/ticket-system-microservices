@@ -63,4 +63,14 @@ public class GlobalExceptionHandler {
                 .build();
     }
 
+    @ExceptionHandler(EventNotFoundException.class)
+    @ResponseStatus(value = HttpStatus.NOT_FOUND)
+    public ErrorMessage handleEventNotFound(EventNotFoundException ex, WebRequest request) {
+        return ErrorMessage.builder()
+                .statusCode(HttpStatus.NOT_FOUND.value())
+                .timestamp(LocalDateTime.now())
+                .message(ex.getMessage())
+                .description(request.getDescription(false))
+                .build();
+    }
 }

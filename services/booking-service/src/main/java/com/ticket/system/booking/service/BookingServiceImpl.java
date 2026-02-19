@@ -12,7 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Map;
+
+import com.ticket.system.booking.client.EventClient;
 import com.ticket.system.booking.config.RabbitMQConfig;
 import com.ticket.system.booking.dto.BookingCreatedEvent;
 import com.ticket.system.booking.dto.BookingRequestDTO;
@@ -28,6 +29,7 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final StringRedisTemplate redisTemplate; 
     private final RabbitTemplate rabbitTemplate;
+    private final EventClient eventClient;
 
     @Override
     @Transactional
@@ -87,6 +89,8 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public void setStock(Long eventId, Integer quantity) {
+        eventClient.getEventById(eventId);
+
         redisTemplate.opsForValue().set("event:stock:" + eventId, String.valueOf(quantity));
     }
 
