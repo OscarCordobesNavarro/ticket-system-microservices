@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Map;
 import com.ticket.system.booking.config.RabbitMQConfig;
+import com.ticket.system.booking.dto.BookingCreatedEvent;
 import com.ticket.system.booking.dto.BookingRequestDTO;
 import com.ticket.system.booking.dto.BookingResponseDTO;
 import com.ticket.system.booking.exception.BookingNotFoundException;
@@ -55,11 +56,12 @@ public class BookingServiceImpl implements BookingService {
         booking = bookingRepository.save(booking);
 
         // Enviar mensaje a RabbitMQ
-        Map<String, Object> event = Map.of(
-                "bookingId", booking.getId(),
-                "eventId", booking.getEventId(),
-                "quantity", booking.getQuantity(),
-                "userId", booking.getUserId());
+        BookingCreatedEvent event = BookingCreatedEvent.builder()
+                .bookingId(booking.getId())
+                .eventId(booking.getEventId())
+                .quantity(booking.getQuantity())
+                .userId(booking.getUserId())
+                .build();
 
         rabbitTemplate.convertAndSend(RabbitMQConfig.BOOKING_EXCHANGE, RabbitMQConfig.BOOKING_CREATED_ROUTING_KEY, event);
 

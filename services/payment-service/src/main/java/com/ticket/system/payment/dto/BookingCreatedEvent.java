@@ -1,0 +1,18 @@
+package com.ticket.system.payment.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class BookingCreatedEvent {
+    private Long bookingId;
+    private Long eventId;
+    private String userId;
+    private Integer quantity;
+    private String status;
+}
