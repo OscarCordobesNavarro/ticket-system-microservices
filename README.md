@@ -6,6 +6,8 @@ Sistema distribuido de alto rendimiento para la reserva y venta de entradas en e
 - **Arquitectura Event-Driven**: Comunicación asíncrona mediante RabbitMQ.
 - **Transacciones Distribuidas**: Implementación del **Patrón Saga (Coreografía)** para asegurar la consistencia.
 - **Alta Concurrencia**: Gestión de stock atómica con **Redis** para evitar sobreventa.
+- **Resiliencia y Validación**: Comunicación síncrona entre servicios con **OpenFeign** y manejo centralizado de errores con **ErrorDecoder**.
+- **Seguridad de Tráfico**: Protección contra abuso mediante **Rate Limiting** basado en Redis en el Gateway.
 - **Cloud Native**: Despliegue completo con Docker Compose y Service Discovery (Eureka).
 - **Entrada Única**: API Gateway centralizado para enrutamiento y balanceo.
 

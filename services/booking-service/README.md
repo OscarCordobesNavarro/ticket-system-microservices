@@ -23,10 +23,10 @@ Para evitar el "Race Condition" (dos personas comprando la última entrada al mi
 | `expiresAt` | DateTime| Tiempo límite para pagar (10 min). |
 
 ## 📡 Endpoints
-- `POST /api/bookings`: Crea una reserva con los parámetros `eventId`, `userId`, `quantity`.
-- `PUT /api/bookings/stock`: Endpoint administrativo para definir el stock inicial en Redis.
+- `POST /api/bookings`: Crea una reserva con los parámetros `eventId`, `userId`, `quantity`. Devuelve `BookingResponseDTO`.
+- `PUT /api/bookings/stock`: Endpoint administrativo para definir el stock inicial en Redis. **Ahora devuelve un `StockResponseDTO` tras validar el evento**.
 - `GET /api/bookings/stock/{eventId}`: Consulta en tiempo real las entradas que quedan en Redis.
 
 ## 🔄 Rol en la Saga
 - **Productor**: Envía `booking.created` al Exchange `booking.exchange`.
-- **Consumidor**: Escucha la cola `booking.failed.queue` para cancelar reservas fallidas.
+- **Consumidor**: Escucha la cola `booking.failed.queue` para cancelar reservas fallidas (Compensating Transaction).

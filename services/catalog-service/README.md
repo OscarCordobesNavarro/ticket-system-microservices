@@ -19,5 +19,5 @@ Este servicio actúa como la fuente de verdad para los eventos disponibles en el
 - `POST /api/events`: Registra un nuevo evento.
 - `GET /api/events/{id}`: Detalle de un evento específico.
 
-## ⚙️ Configuración Destacada
-El servicio utiliza `spring.jpa.hibernate.ddl-auto=update` para agilizar el desarrollo, creando automáticamente el esquema en la base de datos de PostgreSQL al arrancar.
+## 🔌 Integración Inter-servicios
+Este servicio es consumido de forma síncrona por el **Booking Service** mediante **OpenFeign** para validar la existencia de los eventos antes de permitir reservas o actualizaciones de stock.
