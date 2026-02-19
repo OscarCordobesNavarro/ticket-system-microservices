@@ -1,3 +1,0 @@
-/home/oscar/ticket-system-microservices/services/notification-service/src/main/java/com/ticket/system/notification/NotificationApplication.java
-/home/oscar/ticket-system-microservices/services/notification-service/src/main/java/com/ticket/system/notification/config/RabbitMQConfig.java
-/home/oscar/ticket-system-microservices/services/notification-service/src/main/java/com/ticket/system/notification/consumer/NotificationConsumer.java

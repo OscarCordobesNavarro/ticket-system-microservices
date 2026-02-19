@@ -1,5 +1,0 @@
-com/ticket/system/catalog/model/Event$EventBuilder.class
-com/ticket/system/catalog/controller/EventController.class
-com/ticket/system/catalog/model/Event.class
-com/ticket/system/catalog/repository/EventRepository.class
-com/ticket/system/catalog/CatalogServiceApplication.class
