@@ -1,22 +1,28 @@
 package com.ticket.system.notification.consumer;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
+import com.ticket.system.notification.dto.NotificationEvent;
+import com.ticket.system.notification.service.NotificationService;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class NotificationConsumer {
 
+    private final NotificationService notificationService;
+
     @RabbitListener(queues = "notification.queue")
-    public void consumeNotification(Map<String, Object> event) {
-        log.info("**************************************************");
-        log.info("¡NOTIFICACIÓN ENVIADA!");
-        log.info("Usuario: {}", event.get("userId"));
-        log.info("Reserva ID: {}", event.get("bookingId"));
-        log.info("Mensaje: Su pago ha sido confirmado. ¡Disfrute del evento!");
-        log.info("**************************************************");
+    public void consumeNotification(NotificationEvent event) {
+        log.info("Evento recibido en notificaciones: {}", event.getBookingId());
+
+        if ("SUCCESS".equals(event.getStatus())) {
+            notificationService.sendSuccessNotification(event);
+        } else {
+            notificationService.sendFailureNotification(event);
+        }
     }
 }
