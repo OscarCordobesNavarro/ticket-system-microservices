@@ -1,7 +1,8 @@
 package com.ticket.system.catalog.controller;
 
-import com.ticket.system.catalog.model.Event;
-import com.ticket.system.catalog.repository.EventRepository;
+import com.ticket.system.catalog.dto.EventDTO;
+import com.ticket.system.catalog.service.EventService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,21 +13,20 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EventController {
 
-    private final EventRepository eventRepository;
+    private final EventService eventService;
 
     @GetMapping
-    public List<Event> getAllEvents() {
-        return eventRepository.findAll();
+    public List<EventDTO> getAllEvents() {
+        return eventService.getAllEvents();
     }
 
     @PostMapping
-    public Event createEvent(@RequestBody Event event) {
-        return eventRepository.save(event);
+    public EventDTO createEvent(@RequestBody EventDTO eventDTO) {
+        return eventService.createEvent(eventDTO);
     }
 
     @GetMapping("/{id}")
-    public Event getEventById(@PathVariable Long id) {
-        return eventRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Evento no encontrado"));
+    public EventDTO getEventById(@PathVariable Long id) {
+        return eventService.getEventById(id);
     }
 }
