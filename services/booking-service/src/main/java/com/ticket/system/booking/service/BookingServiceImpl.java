@@ -18,6 +18,7 @@ import com.ticket.system.booking.config.RabbitMQConfig;
 import com.ticket.system.booking.dto.BookingCreatedEvent;
 import com.ticket.system.booking.dto.BookingRequestDTO;
 import com.ticket.system.booking.dto.BookingResponseDTO;
+import com.ticket.system.booking.dto.StockResponseDTO;
 import com.ticket.system.booking.exception.BookingNotFoundException;
 import com.ticket.system.booking.exception.NotEnoughStockException;
 
@@ -91,10 +92,16 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public void setStock(Long eventId, Integer quantity) {
+    public StockResponseDTO setStock(Long eventId, Integer quantity) {
         eventClient.getEventById(eventId);
 
         redisTemplate.opsForValue().set("event:stock:" + eventId, String.valueOf(quantity));
+        return StockResponseDTO.builder()
+                .eventId(eventId)
+                .quantity(quantity)
+                .message("Stock actualizado correctamente")
+                .updatedAt(LocalDateTime.now())
+                .build();
     }
 
     @Override
