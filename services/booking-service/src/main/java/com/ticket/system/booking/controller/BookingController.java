@@ -2,6 +2,7 @@ package com.ticket.system.booking.controller;
 
 import com.ticket.system.booking.dto.BookingRequestDTO;
 import com.ticket.system.booking.dto.BookingResponseDTO;
+import com.ticket.system.booking.dto.StockResponseDTO;
 import com.ticket.system.booking.service.BookingService;
 
 import jakarta.validation.Valid;
@@ -25,9 +26,8 @@ public class BookingController {
     }
 
     @PutMapping("/stock")
-    public String initStock(@RequestParam Long eventId, @RequestParam Integer quantity) {
-        bookingService.setStock(eventId, quantity);
-        return "Stock inicializado para el evento " + eventId;
+    public StockResponseDTO initStock(@RequestParam Long eventId, @RequestParam Integer quantity) {
+        return bookingService.setStock(eventId, quantity);
     }
 
     @GetMapping("/stock/{eventId}")
