@@ -21,6 +21,21 @@ public class GlobalExceptionHandler {
                 .build();
     }
 
+    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
+    @ResponseStatus(value = HttpStatus.BAD_REQUEST)
+    public ErrorMessage handleValidationException(org.springframework.web.bind.MethodArgumentNotValidException ex) {
+        String errors = ex.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .reduce("", (a, b) -> a + "; " + b);
+
+        return ErrorMessage.builder()
+                .statusCode(HttpStatus.BAD_REQUEST.value())
+                .timestamp(LocalDateTime.now())
+                .message("Error de validación en los datos del evento")
+                .description(errors)
+                .build();
+    }
+
     @ExceptionHandler(Exception.class)
     @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
     public ErrorMessage handleGenericException(Exception ex, WebRequest request) {
