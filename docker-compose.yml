@@ -73,6 +73,8 @@ services:
     container_name: ticket-gateway
     environment:
       - EUREKA_HOST=discovery-service
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     ports:
       - "8080:8080"
     depends_on:
