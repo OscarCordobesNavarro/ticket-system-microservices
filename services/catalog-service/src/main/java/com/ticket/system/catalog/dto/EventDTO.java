@@ -1,6 +1,9 @@
 package com.ticket.system.catalog.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
+import com.ticket.system.catalog.model.EventStatus;
 
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
@@ -31,4 +34,11 @@ public class EventDTO {
     private LocalDateTime date;
 
     private String description;
+
+    @NotNull(message = "El precio es obligatorio")
+    private BigDecimal price;
+    private String imageUrl;
+
+    @NotNull(message = "El estado del evento es obligatorio")
+    private EventStatus status;
 }

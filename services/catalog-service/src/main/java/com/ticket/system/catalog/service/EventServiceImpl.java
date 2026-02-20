@@ -64,6 +64,9 @@ public class EventServiceImpl implements EventService {
                 .venue(event.getVenue())
                 .date(event.getDate())
                 .description(event.getDescription())
+                .price(event.getPrice())
+                .imageUrl(event.getImageUrl())
+                .status(event.getStatus())
                 .build();
     }
 
@@ -75,6 +78,9 @@ public class EventServiceImpl implements EventService {
                 .venue(eventDTO.getVenue())
                 .date(eventDTO.getDate())
                 .description(eventDTO.getDescription())
+                .price(eventDTO.getPrice())
+                .imageUrl(eventDTO.getImageUrl())
+                .status(eventDTO.getStatus())
                 .build();
     }
 }

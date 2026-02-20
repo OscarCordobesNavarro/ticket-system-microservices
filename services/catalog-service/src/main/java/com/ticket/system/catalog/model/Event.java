@@ -2,6 +2,8 @@ package com.ticket.system.catalog.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -23,4 +25,11 @@ public class Event {
     @Column(nullable = false)
     private LocalDateTime date;
     private String description;
+    @Column(nullable = false)
+    private BigDecimal price;
+    private String imageUrl;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EventStatus status;
 }
+
