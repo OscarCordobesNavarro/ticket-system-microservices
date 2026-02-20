@@ -7,3 +7,5 @@ eureka:
     fetch-registry: false
   server:
     wait-time-in-ms-when-sync-empty: 0
+    eviction-interval-timer-in-ms: 8000 # Escanea servicios caídos cada 2s
+    response-cache-update-interval-ms: 8000 # Actualiza la caché de servicios cada 2s
