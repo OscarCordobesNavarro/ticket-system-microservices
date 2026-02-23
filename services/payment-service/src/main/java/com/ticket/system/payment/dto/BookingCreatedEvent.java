@@ -12,7 +12,8 @@ import lombok.NoArgsConstructor;
 public class BookingCreatedEvent {
     private Long bookingId;
     private Long eventId;
-    private String userId;
+    private Long ticketTypeId;
     private Integer quantity;
+    private String userId;
     private String status;
 }

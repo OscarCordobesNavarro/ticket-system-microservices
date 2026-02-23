@@ -13,6 +13,8 @@ public class NotificationEvent {
     private Long bookingId;
     private String userId;
     private Long eventId;
+    private Long ticketTypeId;
+    private Integer quantity;
     private String status;
     private String message;
 }

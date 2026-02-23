@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/bookings")
 @RequiredArgsConstructor
@@ -22,6 +24,16 @@ public class BookingController {
     @PostMapping
     public BookingResponseDTO createBooking(@RequestBody @Valid BookingRequestDTO bookingRequest) {
         return bookingService.createBooking(bookingRequest);
+    }
+
+    @GetMapping
+    public List<BookingResponseDTO> getAllBookings() {
+        return bookingService.getAllBookings();
+    }
+
+    @GetMapping("/{id}")
+    public BookingResponseDTO getBookingById(@PathVariable Long id) {
+        return bookingService.getBookingById(id);
     }
 
     @PutMapping("/stock")

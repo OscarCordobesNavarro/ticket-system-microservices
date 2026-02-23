@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import com.ticket.system.booking.client.EventClient;
 import com.ticket.system.booking.config.RabbitMQConfig;
@@ -40,7 +42,24 @@ public class BookingServiceImpl implements BookingService {
 
         // Obtener stock actual antes del decremento
         String currentStockStr = redisTemplate.opsForValue().get(stockKey);
-        Long currentStock = currentStockStr != null ? Long.valueOf(currentStockStr) : 0L;
+
+        if (currentStockStr == null) {
+            log.info("Stock no encontrado en Redis para evento {} y ticket {}. Cargando desde catálogo...",
+                    bookingRequest.getEventId(), bookingRequest.getTicketTypeId());
+
+            // Cargar desde el catálogo
+            com.ticket.system.booking.dto.EventDTO event = eventClient.getEventById(bookingRequest.getEventId());
+            com.ticket.system.booking.dto.TicketTypeDTO ticketType = event.getTicketTypes().stream()
+                    .filter(tt -> tt.getId().equals(bookingRequest.getTicketTypeId()))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Tipo de ticket no encontrado en el catálogo"));
+
+            // Inicializar en Redis (usamos capacity como stock inicial)
+            redisTemplate.opsForValue().set(stockKey, String.valueOf(ticketType.getCapacity()));
+            currentStockStr = String.valueOf(ticketType.getCapacity());
+        }
+
+        Long currentStock = Long.valueOf(currentStockStr);
 
         // Operación atómica en Redis
         Long remainingStock = redisTemplate.opsForValue().decrement(stockKey, bookingRequest.getQuantity());
@@ -118,6 +137,33 @@ public class BookingServiceImpl implements BookingService {
         String stockKey = String.format("event:%d:ticket:%d:stock", eventId, ticketTypeId);
         String val = redisTemplate.opsForValue().get(stockKey);
         return val != null ? Long.valueOf(val) : 0L;
+    }
+
+    @Override
+    @Transactional
+    public void confirmBooking(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new BookingNotFoundException(bookingId));
+
+        if (booking.getStatus() == BookingStatus.PENDING) {
+            booking.setStatus(BookingStatus.CONFIRMED);
+            bookingRepository.save(booking);
+            log.info("Reserva {} confirmada exitosamente", bookingId);
+        }
+    }
+
+    @Override
+    public List<BookingResponseDTO> getAllBookings() {
+        return bookingRepository.findAll().stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public BookingResponseDTO getBookingById(Long id) {
+        return bookingRepository.findById(id)
+                .map(this::convertToResponseDTO)
+                .orElseThrow(() -> new BookingNotFoundException(id));
     }
 
     private BookingResponseDTO convertToResponseDTO(Booking booking) {
