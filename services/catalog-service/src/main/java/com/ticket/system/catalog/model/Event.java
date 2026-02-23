@@ -25,11 +25,12 @@ public class Event {
     @Column(nullable = false)
     private LocalDateTime date;
     private String description;
-    @Column(nullable = false)
-    private BigDecimal price;
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private java.util.List<TicketType> ticketTypes = new java.util.ArrayList<>();
+
     private String imageUrl;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EventStatus status;
 }
-

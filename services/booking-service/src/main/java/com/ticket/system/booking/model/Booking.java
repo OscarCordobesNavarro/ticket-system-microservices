@@ -20,6 +20,9 @@ public class Booking {
     private Long eventId; // Referencia al ID del Catálogo
 
     @Column(nullable = false)
+    private Long ticketTypeId; // Referencia al tipo de entrada del Catálogo
+
+    @Column(nullable = false)
     private String userId;
 
     @Column(nullable = false)

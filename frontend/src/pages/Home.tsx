@@ -50,6 +50,10 @@ const Home: React.FC = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {events.map((event) => {
                                 const eventDate = new EventDate(event.date);
+                                const minPrice = event.ticketTypes && event.ticketTypes.length > 0
+                                    ? Math.min(...event.ticketTypes.map(t => t.price))
+                                    : 0;
+
                                 return (
                                     <EventCard
                                         key={event.id}
@@ -59,7 +63,7 @@ const Home: React.FC = () => {
                                         venue={event.venue}
                                         date={eventDate.formatted}
                                         time={eventDate.hour}
-                                        price={event.price}
+                                        price={minPrice}
                                         imageUrl={event.imageUrl}
                                         status={event.status}
                                     />

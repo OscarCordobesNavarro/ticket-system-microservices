@@ -1,22 +1,23 @@
 package com.ticket.system.catalog.service;
 
 import com.ticket.system.catalog.dto.EventDTO;
+import com.ticket.system.catalog.dto.TicketTypeDTO;
 import com.ticket.system.catalog.exception.EventNotFoundException;
 import com.ticket.system.catalog.model.Event;
+import com.ticket.system.catalog.model.TicketType;
 import com.ticket.system.catalog.repository.EventRepository;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 
-
-
-
 @Service
 @RequiredArgsConstructor
 public class EventServiceImpl implements EventService {
+
     private final EventRepository eventRepository;
 
     @Override
@@ -32,7 +33,7 @@ public class EventServiceImpl implements EventService {
     public EventDTO getEventById(Long id) {
         return convertToDTO(eventRepository.findById(id).orElseThrow(() -> new EventNotFoundException(id)));
     }
-    
+
     @Override
     @Transactional(readOnly = true)
     public List<EventDTO> findByArtist(String artist) {
@@ -64,23 +65,45 @@ public class EventServiceImpl implements EventService {
                 .venue(event.getVenue())
                 .date(event.getDate())
                 .description(event.getDescription())
-                .price(event.getPrice())
+                .ticketTypes(event.getTicketTypes().stream()
+                        .map(tt -> TicketTypeDTO.builder()
+                                .id(tt.getId())
+                                .name(tt.getName())
+                                .description(tt.getDescription())
+                                .price(tt.getPrice())
+                                .capacity(tt.getCapacity())
+                                .build())
+                        .collect(Collectors.toList()))
                 .imageUrl(event.getImageUrl())
                 .status(event.getStatus())
                 .build();
     }
 
     private Event convertToEntity(EventDTO eventDTO) {
-        return Event.builder()
+        Event event = Event.builder()
                 .id(eventDTO.getId())
                 .name(eventDTO.getName())
                 .artist(eventDTO.getArtist())
                 .venue(eventDTO.getVenue())
                 .date(eventDTO.getDate())
                 .description(eventDTO.getDescription())
-                .price(eventDTO.getPrice())
                 .imageUrl(eventDTO.getImageUrl())
                 .status(eventDTO.getStatus())
                 .build();
+
+        if (eventDTO.getTicketTypes() != null) {
+            List<TicketType> ticketTypes = eventDTO.getTicketTypes().stream()
+                    .map(dto -> TicketType.builder()
+                            .id(dto.getId())
+                            .name(dto.getName())
+                            .description(dto.getDescription())
+                            .price(dto.getPrice())
+                            .capacity(dto.getCapacity())
+                            .event(event)
+                            .build())
+                    .collect(Collectors.toList());
+            event.setTicketTypes(ticketTypes);
+        }
+        return event;
     }
 }

@@ -12,6 +12,7 @@ const EventBooking: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [quantity, setQuantity] = useState(1);
+    const [selectedTicketTypeId, setSelectedTicketTypeId] = useState<number | null>(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [showErrorModal, setShowErrorModal] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
@@ -58,13 +59,23 @@ const EventBooking: React.FC = () => {
     }
 
     const eventDate = new EventDate(event.date);
+
+    // Set initial ticket type if not set
+    if (selectedTicketTypeId === null && event.ticketTypes?.length > 0) {
+        setSelectedTicketTypeId(event.ticketTypes[0].id);
+    }
+
+    const selectedTicketType = event.ticketTypes?.find(t => t.id === selectedTicketTypeId);
     const serviceFee = 12.50;
-    const itemTotal = event.price * quantity;
+    const itemTotal = (selectedTicketType?.price || 0) * quantity;
     const total = itemTotal + serviceFee;
 
     const handleReserve = () => {
+        if (!selectedTicketTypeId) return;
+
         mutation.mutate({
             eventId: Number(id),
+            ticketTypeId: selectedTicketTypeId,
             userId: 'user-123', // Hardcoded for now
             quantity: quantity
         });
@@ -81,7 +92,16 @@ const EventBooking: React.FC = () => {
             <div className="relative z-10 min-h-screen flex flex-col">
                 <Navbar />
 
-                <main className="flex-grow flex items-center justify-center p-4">
+                <main className="flex-grow flex flex-col items-center justify-center p-4">
+                    <div className="w-full max-w-5xl mb-4">
+                        <button
+                            onClick={() => navigate('/')}
+                            className="flex items-center gap-2 text-slate-600 hover:text-primary font-bold transition-colors group"
+                        >
+                            <span className="material-symbols-outlined transition-transform group-hover:-translate-x-1">arrow_back</span>
+                            <span>Volver a eventos</span>
+                        </button>
+                    </div>
                     <div className="flex w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl border border-gray-200 md:flex-row">
                         {/* Left Side: Ticket Selection */}
                         <div className="flex flex-col gap-6 p-6 md:w-3/5 md:p-10 overflow-y-auto max-h-[90vh] md:max-h-none">
@@ -109,36 +129,40 @@ const EventBooking: React.FC = () => {
                             <div className="space-y-4">
                                 <h3 className="text-lg font-bold text-slate-800 border-b border-gray-100 pb-2 uppercase tracking-wider">Entradas Disponibles</h3>
                                 <div className="flex flex-col gap-3">
-                                    <label className="group relative flex cursor-pointer items-center justify-between rounded-xl border-2 border-primary bg-blue-50/50 p-5 transition-all shadow-sm">
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-5 w-5 rounded-full border-4 border-primary bg-white"></div>
-                                            <div>
-                                                <p className="font-bold text-slate-900 text-lg">Entrada General</p>
-                                                <p className="text-xs text-primary font-bold mt-1 flex items-center gap-1 uppercase tracking-tighter">
-                                                    <span className="material-symbols-outlined text-[14px]">local_fire_department</span>
-                                                    Alta Demanda
+                                    {event.ticketTypes?.map((ticketType) => (
+                                        <label
+                                            key={ticketType.id}
+                                            className={`group relative flex cursor-pointer items-center justify-between rounded-xl border-2 p-5 transition-all shadow-sm ${selectedTicketTypeId === ticketType.id
+                                                ? 'border-primary bg-blue-50/50'
+                                                : 'border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50'
+                                                }`}
+                                            onClick={() => setSelectedTicketTypeId(ticketType.id)}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className={`h-5 w-5 rounded-full border-4 ${selectedTicketTypeId === ticketType.id
+                                                    ? 'border-primary bg-white'
+                                                    : 'border-slate-200 bg-white'
+                                                    }`}></div>
+                                                <div>
+                                                    <p className={`font-bold text-lg ${selectedTicketTypeId === ticketType.id ? 'text-slate-900' : 'text-slate-700'}`}>
+                                                        {ticketType.name}
+                                                    </p>
+                                                    {ticketType.description && (
+                                                        <p className={`text-xs mt-1 flex items-center gap-1 font-medium ${selectedTicketTypeId === ticketType.id ? 'text-primary' : 'text-slate-500'}`}>
+                                                            <span className="material-symbols-outlined text-[14px]">info</span>
+                                                            {ticketType.description}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className={`text-2xl font-black ${selectedTicketTypeId === ticketType.id ? 'text-slate-900' : 'text-slate-700'}`}>
+                                                    {ticketType.price}€
                                                 </p>
+                                                <p className="text-xs text-emerald-600 font-bold uppercase">En Stock</p>
                                             </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-2xl font-black text-slate-900">{event.price}€</p>
-                                            <p className="text-xs text-emerald-600 font-bold uppercase">En Stock</p>
-                                        </div>
-                                    </label>
-
-                                    <div className="group relative flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50/50 p-5 opacity-60 grayscale cursor-not-allowed">
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-5 w-5 rounded-full border-2 border-gray-300 bg-gray-100"></div>
-                                            <div>
-                                                <p className="font-bold text-slate-500 text-lg">VIP Front Pit</p>
-                                                <p className="text-xs text-slate-400 mt-1 uppercase tracking-tighter">Acceso Exclusivo</p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-2xl font-black text-slate-400">240€</p>
-                                            <p className="text-xs text-red-500 font-bold uppercase tracking-tighter">Próximamente</p>
-                                        </div>
-                                    </div>
+                                        </label>
+                                    ))}
                                 </div>
                             </div>
 
@@ -182,7 +206,7 @@ const EventBooking: React.FC = () => {
 
                                 <div className="space-y-4">
                                     <div className="flex justify-between text-base text-slate-600">
-                                        <span className="font-medium">Entrada General (x{quantity})</span>
+                                        <span className="font-medium">{selectedTicketType?.name || 'Entrada'} (x{quantity})</span>
                                         <span className="font-black text-slate-900">{itemTotal.toFixed(2)}€</span>
                                     </div>
                                     <div className="flex justify-between text-[14px] text-slate-500">

@@ -4,14 +4,15 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
+import java.math.BigDecimal;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class EventDTO {
+public class TicketTypeDTO {
     private Long id;
-    private List<TicketTypeDTO> ticketTypes;
+    private String name;
+    private BigDecimal price;
+    private Integer capacity;
 }

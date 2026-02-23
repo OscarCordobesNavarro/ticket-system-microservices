@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
 
-
 @RestController
 @RequestMapping("/api/bookings")
 @RequiredArgsConstructor
@@ -26,13 +25,14 @@ public class BookingController {
     }
 
     @PutMapping("/stock")
-    public StockResponseDTO initStock(@RequestParam Long eventId, @RequestParam Integer quantity) {
-        return bookingService.setStock(eventId, quantity);
+    public StockResponseDTO initStock(@RequestParam Long eventId, @RequestParam Long ticketTypeId,
+            @RequestParam Integer quantity) {
+        return bookingService.setStock(eventId, ticketTypeId, quantity);
     }
 
-    @GetMapping("/stock/{eventId}")
-    public Long getStock(@PathVariable Long eventId) {
-        return bookingService.getStock(eventId);
+    @GetMapping("/stock/{eventId}/{ticketTypeId}")
+    public Long getStock(@PathVariable Long eventId, @PathVariable Long ticketTypeId) {
+        return bookingService.getStock(eventId, ticketTypeId);
     }
 
 }

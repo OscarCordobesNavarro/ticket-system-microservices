@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { BookingRequest, BookingResponse } from '../models/booking';
 
 const API_GATEWAY_URL = 'http://localhost:8080';
 
@@ -9,28 +10,14 @@ const api = axios.create({
     },
 });
 
-export interface BookingRequest {
-    eventId: number;
-    userId: string;
-    quantity: number;
-}
-
-export interface BookingResponse {
-    bookingId: string;
-    eventId: number;
-    userId: string;
-    quantity: number;
-    totalAmount: number;
-    status: string;
-    bookingDate: string;
-}
-
 export const createBooking = async (request: BookingRequest): Promise<BookingResponse> => {
     const { data } = await api.post<BookingResponse>('/booking/api/bookings', request);
     return data;
 };
 
-export const fetchStock = async (eventId: number): Promise<number> => {
-    const { data } = await api.get<number>(`/booking/api/bookings/stock/${eventId}`);
+export const fetchStock = async (eventId: number, ticketTypeId: number): Promise<number> => {
+    const { data } = await api.get<number>(`/booking/api/bookings/stock/${eventId}/${ticketTypeId}`);
     return data;
 };
+
+export default api;

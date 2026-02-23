@@ -35,8 +35,7 @@ public class EventDTO {
 
     private String description;
 
-    @NotNull(message = "El precio es obligatorio")
-    private BigDecimal price;
+    private java.util.List<TicketTypeDTO> ticketTypes;
     private String imageUrl;
 
     @NotNull(message = "El estado del evento es obligatorio")

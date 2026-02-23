@@ -35,6 +35,14 @@ export class EventDate {
     }
 }
 
+export interface TicketType {
+    id: number;
+    name: string;
+    description: string;
+    price: number;
+    capacity: number;
+}
+
 export interface Event {
     id: number;
     name: string;
@@ -42,7 +50,7 @@ export interface Event {
     venue: string;
     date: string;
     description: string;
-    price: number;
+    ticketTypes: TicketType[];
     imageUrl: string;
     status: EventStatus;
 }

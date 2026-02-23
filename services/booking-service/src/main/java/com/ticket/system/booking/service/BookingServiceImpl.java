@@ -28,14 +28,15 @@ import com.ticket.system.booking.exception.NotEnoughStockException;
 public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
-    private final StringRedisTemplate redisTemplate; 
+    private final StringRedisTemplate redisTemplate;
     private final RabbitTemplate rabbitTemplate;
     private final EventClient eventClient;
 
     @Override
     @Transactional
     public BookingResponseDTO createBooking(BookingRequestDTO bookingRequest) {
-        String stockKey = "event:stock:" + bookingRequest.getEventId();
+        String stockKey = String.format("event:%d:ticket:%d:stock", bookingRequest.getEventId(),
+                bookingRequest.getTicketTypeId());
 
         // Obtener stock actual antes del decremento
         String currentStockStr = redisTemplate.opsForValue().get(stockKey);
@@ -52,24 +53,27 @@ public class BookingServiceImpl implements BookingService {
         // Guardamos
         Booking booking = Booking.builder()
                 .eventId(bookingRequest.getEventId())
+                .ticketTypeId(bookingRequest.getTicketTypeId())
                 .userId(bookingRequest.getUserId())
                 .quantity(bookingRequest.getQuantity())
                 .status(BookingStatus.PENDING)
                 .createdAt(LocalDateTime.now())
-                .expiresAt(LocalDateTime.now().plusMinutes(10)) // Expira en 15 minutos
+                .expiresAt(LocalDateTime.now().plusMinutes(10))
                 .build();
-        
+
         booking = bookingRepository.save(booking);
 
         // Enviar mensaje a RabbitMQ
         BookingCreatedEvent event = BookingCreatedEvent.builder()
                 .bookingId(booking.getId())
                 .eventId(booking.getEventId())
+                .ticketTypeId(booking.getTicketTypeId())
                 .quantity(booking.getQuantity())
                 .userId(booking.getUserId())
                 .build();
 
-        rabbitTemplate.convertAndSend(RabbitMQConfig.BOOKING_EXCHANGE, RabbitMQConfig.BOOKING_CREATED_ROUTING_KEY, event);
+        rabbitTemplate.convertAndSend(RabbitMQConfig.BOOKING_EXCHANGE, RabbitMQConfig.BOOKING_CREATED_ROUTING_KEY,
+                event);
 
         return convertToResponseDTO(booking);
 
@@ -80,33 +84,39 @@ public class BookingServiceImpl implements BookingService {
     public void cancelBooking(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new BookingNotFoundException(bookingId));
-        
-        if(booking.getStatus() == BookingStatus.PENDING) {
+
+        if (booking.getStatus() == BookingStatus.PENDING) {
             booking.setStatus(BookingStatus.CANCELLED);
             bookingRepository.save(booking);
 
             // Devolver el stock a Redis
-            String stockKey = "event:stock:" + booking.getEventId();
+            String stockKey = String.format("event:%d:ticket:%d:stock", booking.getEventId(),
+                    booking.getTicketTypeId());
             redisTemplate.opsForValue().increment(stockKey, booking.getQuantity());
         }
     }
 
     @Override
-    public StockResponseDTO setStock(Long eventId, Integer quantity) {
-        eventClient.getEventById(eventId);
+    public StockResponseDTO setStock(Long eventId, Long ticketTypeId, Integer quantity) {
+        // Podríamos validar contra el catalog-service si el ticketTypeId pertenece al
+        // eventId
+        // eventClient.getEventById(eventId);
 
-        redisTemplate.opsForValue().set("event:stock:" + eventId, String.valueOf(quantity));
+        String stockKey = String.format("event:%d:ticket:%d:stock", eventId, ticketTypeId);
+        redisTemplate.opsForValue().set(stockKey, String.valueOf(quantity));
+
         return StockResponseDTO.builder()
                 .eventId(eventId)
                 .quantity(quantity)
-                .message("Stock actualizado correctamente")
+                .message("Stock actualizado correctamente para el tipo de entrada " + ticketTypeId)
                 .updatedAt(LocalDateTime.now())
                 .build();
     }
 
     @Override
-    public Long getStock(Long eventId) {
-        String val = redisTemplate.opsForValue().get("event:stock:" + eventId);
+    public Long getStock(Long eventId, Long ticketTypeId) {
+        String stockKey = String.format("event:%d:ticket:%d:stock", eventId, ticketTypeId);
+        String val = redisTemplate.opsForValue().get(stockKey);
         return val != null ? Long.valueOf(val) : 0L;
     }
 
@@ -114,6 +124,7 @@ public class BookingServiceImpl implements BookingService {
         return BookingResponseDTO.builder()
                 .id(booking.getId())
                 .eventId(booking.getEventId())
+                .ticketTypeId(booking.getTicketTypeId())
                 .userId(booking.getUserId())
                 .quantity(booking.getQuantity())
                 .status(booking.getStatus())

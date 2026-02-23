@@ -14,6 +14,8 @@ import lombok.NoArgsConstructor;
 public class BookingRequestDTO {
     @NotNull(message = "El ID del evento es obligatorio")
     private Long eventId;
+    @NotNull(message = "El ID del tipo de entrada es obligatorio")
+    private Long ticketTypeId;
     @NotNull(message = "El ID del usuario es obligatorio")
     private String userId;
     @Min(value = 1, message = "La cantidad de entradas debe ser al menos 1")

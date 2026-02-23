@@ -60,10 +60,18 @@ Comprueba que todos los servicios están registrados en Eureka:
 `GET http://localhost:8080/catalog/api/events`
 
 ### 2. Inicializar Stock
-`PUT http://localhost:8080/booking/api/bookings/stock?eventId=1&quantity=100`
+`PUT http://localhost:8080/booking/api/bookings/stock?eventId=1&ticketTypeId=1&quantity=100`
 
 ### 3. Crear una Reserva
-`POST http://localhost:8080/booking/api/bookings?eventId=1&userId=tester&quantity=2`
+`POST http://localhost:8080/booking/api/bookings`
+```json
+{
+  "eventId": 1,
+  "ticketTypeId": 1,
+  "userId": "tester",
+  "quantity": 2
+}
+```
 
 ---
 
