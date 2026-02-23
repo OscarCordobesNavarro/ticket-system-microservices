@@ -8,9 +8,6 @@ import com.ticket.system.booking.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
@@ -31,20 +28,24 @@ public class BookingController {
         return bookingService.getAllBookings();
     }
 
+    @GetMapping("/user/{userId}")
+    public List<BookingResponseDTO> getBookingsByUserId(@PathVariable String userId) {
+        return bookingService.getBookingsByUserId(userId);
+    }
+
     @GetMapping("/{id}")
     public BookingResponseDTO getBookingById(@PathVariable Long id) {
         return bookingService.getBookingById(id);
     }
 
-    @PutMapping("/stock")
+    @PostMapping("/stock/init")
     public StockResponseDTO initStock(@RequestParam Long eventId, @RequestParam Long ticketTypeId,
             @RequestParam Integer quantity) {
-        return bookingService.setStock(eventId, ticketTypeId, quantity);
+        return bookingService.initStock(eventId, ticketTypeId, quantity);
     }
 
     @GetMapping("/stock/{eventId}/{ticketTypeId}")
     public Long getStock(@PathVariable Long eventId, @PathVariable Long ticketTypeId) {
         return bookingService.getStock(eventId, ticketTypeId);
     }
-
 }

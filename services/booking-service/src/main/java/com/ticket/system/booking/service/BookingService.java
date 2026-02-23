@@ -9,7 +9,7 @@ public interface BookingService {
 
     BookingResponseDTO createBooking(BookingRequestDTO bookingRequest);
 
-    StockResponseDTO setStock(Long eventId, Long ticketTypeId, Integer quantity);
+    StockResponseDTO initStock(Long eventId, Long ticketTypeId, Integer quantity);
 
     Long getStock(Long eventId, Long ticketTypeId);
 
@@ -17,7 +17,11 @@ public interface BookingService {
 
     void confirmBooking(Long bookingId);
 
+    List<BookingResponseDTO> getBookingsByUserId(String userId);
+
     List<BookingResponseDTO> getAllBookings();
 
     BookingResponseDTO getBookingById(Long id);
+
+    void setStock(Long eventId, Long ticketTypeId, Integer quantity);
 }

@@ -1,11 +1,15 @@
 package com.ticket.system.booking.service;
 
+import com.ticket.system.booking.client.EventClient;
+import com.ticket.system.booking.config.RabbitMQConfig;
+import com.ticket.system.booking.dto.*;
+import com.ticket.system.booking.exception.BookingNotFoundException;
+import com.ticket.system.booking.exception.NotEnoughStockException;
 import com.ticket.system.booking.model.Booking;
 import com.ticket.system.booking.model.BookingStatus;
 import com.ticket.system.booking.repository.BookingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -14,15 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import com.ticket.system.booking.client.EventClient;
-import com.ticket.system.booking.config.RabbitMQConfig;
-import com.ticket.system.booking.dto.BookingCreatedEvent;
-import com.ticket.system.booking.dto.BookingRequestDTO;
-import com.ticket.system.booking.dto.BookingResponseDTO;
-import com.ticket.system.booking.dto.StockResponseDTO;
-import com.ticket.system.booking.exception.BookingNotFoundException;
-import com.ticket.system.booking.exception.NotEnoughStockException;
 
 @Service
 @RequiredArgsConstructor
@@ -40,33 +35,24 @@ public class BookingServiceImpl implements BookingService {
         String stockKey = String.format("event:%d:ticket:%d:stock", bookingRequest.getEventId(),
                 bookingRequest.getTicketTypeId());
 
-        // Obtener stock actual antes del decremento
+        // Intentar obtener de Redis para ver si ya está inicializado
         String currentStockStr = redisTemplate.opsForValue().get(stockKey);
+        Long remainingStock;
 
         if (currentStockStr == null) {
             log.info("Stock no encontrado en Redis para evento {} y ticket {}. Cargando desde catálogo...",
                     bookingRequest.getEventId(), bookingRequest.getTicketTypeId());
-
-            // Cargar desde el catálogo
-            com.ticket.system.booking.dto.EventDTO event = eventClient.getEventById(bookingRequest.getEventId());
-            com.ticket.system.booking.dto.TicketTypeDTO ticketType = event.getTicketTypes().stream()
-                    .filter(tt -> tt.getId().equals(bookingRequest.getTicketTypeId()))
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("Tipo de ticket no encontrado en el catálogo"));
-
-            // Inicializar en Redis (usamos capacity como stock inicial)
-            redisTemplate.opsForValue().set(stockKey, String.valueOf(ticketType.getCapacity()));
-            currentStockStr = String.valueOf(ticketType.getCapacity());
+            // Carga e inicializa en Redis
+            loadStockFromCatalog(bookingRequest.getEventId(), bookingRequest.getTicketTypeId(), stockKey);
         }
 
-        Long currentStock = Long.valueOf(currentStockStr);
-
         // Operación atómica en Redis
-        Long remainingStock = redisTemplate.opsForValue().decrement(stockKey, bookingRequest.getQuantity());
+        remainingStock = redisTemplate.opsForValue().decrement(stockKey, bookingRequest.getQuantity());
 
         if (remainingStock < 0) {
             redisTemplate.opsForValue().increment(stockKey, bookingRequest.getQuantity()); // Revertir decremento
-            throw new NotEnoughStockException(currentStock.intValue()); // Lanzar con stock original
+            // El stock antes del decremento era (remainingStock + cantidad solicitada)
+            throw new NotEnoughStockException((int) (remainingStock + bookingRequest.getQuantity()));
         }
 
         // Guardamos
@@ -95,7 +81,6 @@ public class BookingServiceImpl implements BookingService {
                 event);
 
         return convertToResponseDTO(booking);
-
     }
 
     @Override
@@ -108,19 +93,17 @@ public class BookingServiceImpl implements BookingService {
             booking.setStatus(BookingStatus.CANCELLED);
             bookingRepository.save(booking);
 
-            // Devolver el stock a Redis
+            // Devolver stock a Redis
             String stockKey = String.format("event:%d:ticket:%d:stock", booking.getEventId(),
                     booking.getTicketTypeId());
             redisTemplate.opsForValue().increment(stockKey, booking.getQuantity());
+
+            log.info("Reserva {} cancelada. Stock devuelto para ticket type {}", bookingId, booking.getTicketTypeId());
         }
     }
 
     @Override
-    public StockResponseDTO setStock(Long eventId, Long ticketTypeId, Integer quantity) {
-        // Podríamos validar contra el catalog-service si el ticketTypeId pertenece al
-        // eventId
-        // eventClient.getEventById(eventId);
-
+    public StockResponseDTO initStock(Long eventId, Long ticketTypeId, Integer quantity) {
         String stockKey = String.format("event:%d:ticket:%d:stock", eventId, ticketTypeId);
         redisTemplate.opsForValue().set(stockKey, String.valueOf(quantity));
 
@@ -136,7 +119,37 @@ public class BookingServiceImpl implements BookingService {
     public Long getStock(Long eventId, Long ticketTypeId) {
         String stockKey = String.format("event:%d:ticket:%d:stock", eventId, ticketTypeId);
         String val = redisTemplate.opsForValue().get(stockKey);
-        return val != null ? Long.valueOf(val) : 0L;
+
+        if (val == null) {
+            log.info("Stock no encontrado en Redis para evento {} y ticket {}. Cargando desde catálogo...",
+                    eventId, ticketTypeId);
+            return loadStockFromCatalog(eventId, ticketTypeId, stockKey);
+        }
+
+        return Long.valueOf(val);
+    }
+
+    private Long loadStockFromCatalog(Long eventId, Long ticketTypeId, String stockKey) {
+        // Cargar desde el catálogo
+        com.ticket.system.booking.dto.EventDTO event = eventClient.getEventById(eventId);
+        com.ticket.system.booking.dto.TicketTypeDTO ticketType = event.getTicketTypes().stream()
+                .filter(tt -> tt.getId().equals(ticketTypeId))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Tipo de ticket no encontrado en el catálogo"));
+
+        // Inicializar en Redis (usamos capacity como stock inicial)
+        // Usamos setIfAbsent para evitar sobreescribir si otra instancia lo cargó justo
+        // ahora
+        Boolean initialized = redisTemplate.opsForValue().setIfAbsent(stockKey,
+                String.valueOf(ticketType.getCapacity()));
+
+        if (Boolean.TRUE.equals(initialized)) {
+            return Long.valueOf(ticketType.getCapacity());
+        } else {
+            // Si ya estaba inicializado por otro proceso, leemos el valor actual
+            String currentVal = redisTemplate.opsForValue().get(stockKey);
+            return currentVal != null ? Long.valueOf(currentVal) : Long.valueOf(ticketType.getCapacity());
+        }
     }
 
     @Override
@@ -148,8 +161,22 @@ public class BookingServiceImpl implements BookingService {
         if (booking.getStatus() == BookingStatus.PENDING) {
             booking.setStatus(BookingStatus.CONFIRMED);
             bookingRepository.save(booking);
-            log.info("Reserva {} confirmada exitosamente", bookingId);
+            log.info("Reserva {} confirmada", bookingId);
         }
+    }
+
+    @Override
+    public BookingResponseDTO getBookingById(Long id) {
+        return bookingRepository.findById(id)
+                .map(this::convertToResponseDTO)
+                .orElseThrow(() -> new BookingNotFoundException(id));
+    }
+
+    @Override
+    public List<BookingResponseDTO> getBookingsByUserId(String userId) {
+        return bookingRepository.findByUserId(userId).stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -160,10 +187,9 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public BookingResponseDTO getBookingById(Long id) {
-        return bookingRepository.findById(id)
-                .map(this::convertToResponseDTO)
-                .orElseThrow(() -> new BookingNotFoundException(id));
+    public void setStock(Long eventId, Long ticketTypeId, Integer quantity) {
+        String stockKey = String.format("event:%d:ticket:%d:stock", eventId, ticketTypeId);
+        redisTemplate.opsForValue().set(stockKey, String.valueOf(quantity));
     }
 
     private BookingResponseDTO convertToResponseDTO(Booking booking) {
