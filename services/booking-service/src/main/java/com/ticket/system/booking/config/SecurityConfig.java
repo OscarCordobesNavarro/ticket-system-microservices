@@ -1,5 +1,7 @@
 package com.ticket.system.booking.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ticket.system.booking.exception.ErrorMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,13 +11,14 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import java.time.LocalDateTime;
+
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthFilter;
-    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -30,10 +33,10 @@ public class SecurityConfig {
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setContentType("application/json");
                             response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
-                            var error = com.ticket.system.booking.exception.ErrorMessage.builder()
+                            var error = ErrorMessage.builder()
                                     .statusCode(401)
-                                    .timestamp(java.time.LocalDateTime.now())
-                                    .message("Token inválido o no proporcionado")
+                                    .timestamp(LocalDateTime.now())
+                                    .message("Autenticación requerida. Asegúrate de incluir un token JWT válido.")
                                     .description(request.getRequestURI())
                                     .build();
                             response.getWriter().write(objectMapper.writeValueAsString(error));
@@ -41,9 +44,9 @@ public class SecurityConfig {
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setContentType("application/json");
                             response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
-                            var error = com.ticket.system.booking.exception.ErrorMessage.builder()
+                            var error = ErrorMessage.builder()
                                     .statusCode(403)
-                                    .timestamp(java.time.LocalDateTime.now())
+                                    .timestamp(LocalDateTime.now())
                                     .message("No tienes permisos para acceder a este recurso")
                                     .description(request.getRequestURI())
                                     .build();
@@ -53,7 +56,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new GatewayHeaderAuthFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
