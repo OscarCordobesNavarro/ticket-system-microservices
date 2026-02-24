@@ -8,6 +8,7 @@ import com.ticket.system.booking.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 
@@ -19,7 +20,11 @@ public class BookingController {
     private final BookingService bookingService;
 
     @PostMapping
-    public BookingResponseDTO createBooking(@RequestBody @Valid BookingRequestDTO bookingRequest) {
+    public BookingResponseDTO createBooking(@RequestBody @Valid BookingRequestDTO bookingRequest, Authentication authentication) {
+        Long authenticatedUserId = (Long) authentication.getDetails();
+        if (!bookingRequest.getUserId().equals(String.valueOf(authenticatedUserId))) {
+            throw new RuntimeException("No puedes realizar una reserva para otro usuario");
+        }
         return bookingService.createBooking(bookingRequest);
     }
 
@@ -29,7 +34,11 @@ public class BookingController {
     }
 
     @GetMapping("/user/{userId}")
-    public List<BookingResponseDTO> getBookingsByUserId(@PathVariable String userId) {
+    public List<BookingResponseDTO> getBookingsByUserId(@PathVariable String userId, Authentication authentication) {
+        Long authenticatedUserId = (Long) authentication.getDetails();
+        if (!userId.equals(String.valueOf(authenticatedUserId))) {
+            throw new RuntimeException("No tienes permiso para ver las reservas de otro usuario");
+        }
         return bookingService.getBookingsByUserId(userId);
     }
 
