@@ -47,6 +47,19 @@ spring:
                 redis-rate-limiter.burstCapacity: 2
                 key-resolver: "#{@userKeyResolver}"
 
+        # Ruta para el servicio de Usuarios
+        - id: user-service
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/user/**
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 20
+                key-resolver: "#{@userKeyResolver}"
+
 # Configuración de Eureka Client
 eureka:
   client:
