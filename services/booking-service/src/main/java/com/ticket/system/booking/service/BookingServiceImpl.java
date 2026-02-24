@@ -5,6 +5,7 @@ import com.ticket.system.booking.client.UserClient;
 import com.ticket.system.booking.config.RabbitMQConfig;
 import com.ticket.system.booking.dto.*;
 import com.ticket.system.booking.exception.BookingNotFoundException;
+import com.ticket.system.booking.exception.InvalidBookingStatusException;
 import com.ticket.system.booking.exception.NotEnoughStockException;
 import com.ticket.system.booking.exception.UserNotFoundException;
 import com.ticket.system.booking.model.Booking;
@@ -38,16 +39,9 @@ public class BookingServiceImpl implements BookingService {
 
         // Validar usuario mediante el cliente Feign
         log.info("Validando usuario con ID: {}", bookingRequest.getUserId());
-        try {
-            // Trim para evitar errores por espacios en el JSON
-            String cleanUserId = bookingRequest.getUserId().trim();
-            Boolean isValidUser = userClient.validateUser(Long.valueOf(cleanUserId));
-            
-            if (isValidUser == null || !isValidUser) {
-                throw new UserNotFoundException(Long.valueOf(cleanUserId));
-            }
-        } catch (NumberFormatException e) {
-            throw new RuntimeException("El ID de usuario debe ser numérico. Valor recibido: [" + bookingRequest.getUserId() + "]");
+        Boolean isValidUser = userClient.validateUser(bookingRequest.getUserId());
+        if (isValidUser == null || !isValidUser) {
+            throw new UserNotFoundException(bookingRequest.getUserId());
         }
 
         String stockKey = String.format("event:%d:ticket:%d:stock", bookingRequest.getEventId(),
@@ -107,17 +101,19 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new BookingNotFoundException(bookingId));
 
-        if (booking.getStatus() == BookingStatus.PENDING) {
-            booking.setStatus(BookingStatus.CANCELLED);
-            bookingRepository.save(booking);
-
-            // Devolver stock a Redis
-            String stockKey = String.format("event:%d:ticket:%d:stock", booking.getEventId(),
-                    booking.getTicketTypeId());
-            redisTemplate.opsForValue().increment(stockKey, booking.getQuantity());
-
-            log.info("Reserva {} cancelada. Stock devuelto para ticket type {}", bookingId, booking.getTicketTypeId());
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new InvalidBookingStatusException(bookingId, booking.getStatus().name());
         }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        bookingRepository.save(booking);
+
+        // Devolver stock a Redis
+        String stockKey = String.format("event:%d:ticket:%d:stock", booking.getEventId(),
+                booking.getTicketTypeId());
+        redisTemplate.opsForValue().increment(stockKey, booking.getQuantity());
+
+        log.info("Reserva {} cancelada. Stock devuelto para ticket type {}", bookingId, booking.getTicketTypeId());
     }
 
     @Override
@@ -191,7 +187,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public List<BookingResponseDTO> getBookingsByUserId(String userId) {
+    public List<BookingResponseDTO> getBookingsByUserId(Long userId) {
         return bookingRepository.findByUserId(userId).stream()
                 .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());

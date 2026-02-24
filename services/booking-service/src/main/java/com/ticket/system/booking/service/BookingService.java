@@ -17,7 +17,7 @@ public interface BookingService {
 
     void confirmBooking(Long bookingId);
 
-    List<BookingResponseDTO> getBookingsByUserId(String userId);
+    List<BookingResponseDTO> getBookingsByUserId(Long userId);
 
     List<BookingResponseDTO> getAllBookings();
 

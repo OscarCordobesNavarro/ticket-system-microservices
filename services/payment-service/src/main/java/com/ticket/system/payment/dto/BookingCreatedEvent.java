@@ -14,6 +14,6 @@ public class BookingCreatedEvent {
     private Long eventId;
     private Long ticketTypeId;
     private Integer quantity;
-    private String userId;
+    private Long userId;
     private String status;
 }

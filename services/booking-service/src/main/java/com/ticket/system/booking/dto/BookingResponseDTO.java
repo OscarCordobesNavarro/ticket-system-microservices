@@ -17,7 +17,7 @@ public class BookingResponseDTO {
     private Long id;
     private Long eventId;
     private Long ticketTypeId;
-    private String userId;
+    private Long userId;
     private Integer quantity;
     private BookingStatus status;
     private LocalDateTime createdAt;

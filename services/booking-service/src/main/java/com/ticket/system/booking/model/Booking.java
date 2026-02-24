@@ -23,7 +23,7 @@ public class Booking {
     private Long ticketTypeId; // Referencia al tipo de entrada del Catálogo
 
     @Column(nullable = false)
-    private String userId;
+    private Long userId;
 
     @Column(nullable = false)
     private Integer quantity;
