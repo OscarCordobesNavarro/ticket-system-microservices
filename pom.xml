@@ -22,6 +22,7 @@
     <module>services/booking-service</module>
     <module>services/payment-service</module>
     <module>services/notification-service</module>
+    <module>services/user-service</module>
   </modules>
 
   <properties>
