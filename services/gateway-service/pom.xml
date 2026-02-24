@@ -55,6 +55,13 @@
       <scope>runtime</scope>
     </dependency>
 
+    <!-- Spring Security WebFlux: necesario para SecurityWebFilterChain en el Gateway.
+         Deshabilita el CSRF por defecto y cede el control al JwtAuthenticationFilter (GlobalFilter) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+
     <!-- Lombok -->
     <dependency>
       <groupId>org.projectlombok</groupId>
