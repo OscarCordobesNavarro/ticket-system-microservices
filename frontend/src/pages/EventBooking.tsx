@@ -8,12 +8,14 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BookingStatusModal from '../components/BookingStatusModal';
 import { type BookingStatus } from '../components/BookingStatusModal';
+import { useAuth } from '../context/AuthContext';
 
 const EventBooking: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [quantity, setQuantity] = useState(1);
     const [selectedTicketTypeId, setSelectedTicketTypeId] = useState<number | null>(null);
+    const { user } = useAuth();
 
     // Status Modal State
     const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
@@ -141,12 +143,12 @@ const EventBooking: React.FC = () => {
     const total = itemTotal + serviceFee;
 
     const handleReserve = () => {
-        if (!selectedTicketTypeId) return;
+        if (!selectedTicketTypeId || !user) return;
 
         mutation.mutate({
             eventId: Number(id),
             ticketTypeId: selectedTicketTypeId,
-            userId: 'user-123', // Hardcoded for now
+            userId: String(user.userId),
             quantity: quantity
         });
     };

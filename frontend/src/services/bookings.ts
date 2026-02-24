@@ -1,14 +1,5 @@
-import axios from 'axios';
+import api from './api';
 import type { BookingRequest, BookingResponse } from '../models/booking';
-
-const API_GATEWAY_URL = 'http://localhost:8080';
-
-const api = axios.create({
-    baseURL: API_GATEWAY_URL,
-    headers: {
-        'Content-Type': 'application/json',
-    },
-});
 
 export const createBooking = async (request: BookingRequest): Promise<BookingResponse> => {
     const { data } = await api.post<BookingResponse>('/booking/api/bookings', request);

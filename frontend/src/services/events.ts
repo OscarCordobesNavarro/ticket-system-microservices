@@ -1,14 +1,5 @@
-import axios from 'axios';
+import api from './api';
 import type { Event } from '../models/event';
-
-const API_GATEWAY_URL = 'http://localhost:8080';
-
-const api = axios.create({
-    baseURL: API_GATEWAY_URL,
-    headers: {
-        'Content-Type': 'application/json',
-    },
-});
 
 export const fetchEvents = async (): Promise<Event[]> => {
     const { data } = await api.get<Event[]>('/catalog/api/events');
