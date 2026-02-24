@@ -33,6 +33,11 @@ api.interceptors.response.use((response) => {
         }
     }
 
+    // Handle 403 Forbidden (Identity Mismatch)
+    if (error.response && error.response.status === 403) {
+        alert('Acceso Denegado: Tu identidad no coincide con el recurso solicitado.');
+    }
+
     // Handle 429 Too Many Requests (Rate Limiter)
     if (error.response && error.response.status === 429 && !originalRequest._retry) {
         originalRequest._retry = true;

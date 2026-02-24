@@ -27,8 +27,8 @@ const Navbar: React.FC = () => {
                                 <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden sm:block"></div>
                                 <div className="flex items-center gap-2">
                                     <Link to="/my-tickets" className="flex items-center gap-3 p-1 pr-3 rounded-full hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200">
-                                        <div className="size-8 rounded-full bg-slate-200 p-[1px] border border-slate-300 overflow-hidden">
-                                            <span className="material-symbols-outlined text-slate-500 flex items-center justify-center h-full">account_circle</span>
+                                        <div className="size-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center overflow-hidden shrink-0">
+                                            <span className="material-symbols-outlined text-slate-500 text-[22px]">account_circle</span>
                                         </div>
                                         <span className="text-sm font-semibold text-slate-700">{user?.username || 'Usuario'}</span>
                                     </Link>

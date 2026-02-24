@@ -16,4 +16,9 @@ export const fetchBookingById = async (id: string): Promise<BookingResponse> => 
     return data;
 };
 
+export const fetchBookingsByUserId = async (userId: string): Promise<BookingResponse[]> => {
+    const { data } = await api.get<BookingResponse[]>(`/booking/api/bookings/user/${userId}`);
+    return data;
+};
+
 export default api;

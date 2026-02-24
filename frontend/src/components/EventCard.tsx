@@ -72,11 +72,6 @@ const EventCard: React.FC<EventCardProps> = ({
                         {statusLabels[status]}
                     </div>
                 </div>
-                <div className="absolute top-3 right-3">
-                    <button className="p-2 rounded-full bg-white/90 text-slate-600 hover:bg-white hover:text-red-600 shadow-sm transition-colors border border-slate-200">
-                        <span className="material-symbols-outlined text-lg block">favorite</span>
-                    </button>
-                </div>
             </div>
             <div className="p-5 flex flex-col flex-grow relative border-t border-slate-100">
                 <div className="absolute -top-10 right-4 bg-white px-3 py-2 rounded border border-slate-200 text-center shadow-md">
