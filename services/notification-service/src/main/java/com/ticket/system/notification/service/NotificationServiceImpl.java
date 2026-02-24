@@ -1,7 +1,5 @@
 package com.ticket.system.notification.service;
 
-import java.util.Map;
-
 import org.springframework.stereotype.Service;
 
 import com.ticket.system.notification.dto.NotificationEvent;
@@ -14,26 +12,25 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void sendSuccessNotification(NotificationEvent data) {
-        String userId = data.getUserId();
-        String bookingId = data.getBookingId().toString();
-        log.info("📧 ENVIANDO EMAIL DE ÉXITO A: {}", userId);
         log.info("**************************************************");
-        log.info("Asunto: ¡Tu entrada ya está lista!");
-        log.info("Reserva #{} CONFIRMADA", bookingId);
-        log.info("Mensaje: Tu pago ha sido procesado con éxito. ¡Nos vemos en el evento!");
+        log.info("📧 SIMULANDO ENVÍO DE EMAIL → Usuario ID: {}", data.getUserId());
+        log.info("   Asunto: ¡Tu entrada ya está lista! 🎉");
+        log.info("   Reserva #{} — CONFIRMADA ✅", data.getBookingId());
+        log.info("   Evento ID: {} | Tipo de entrada ID: {} | Cantidad: {}",
+                data.getEventId(), data.getTicketTypeId(), data.getQuantity());
+        log.info("   Mensaje: {}", data.getMessage());
         log.info("**************************************************");
     }
 
     @Override
     public void sendFailureNotification(NotificationEvent data) {
-        String userId = data.getUserId();
-        String bookingId = data.getBookingId().toString();
-        log.warn("📧 ENVIANDO EMAIL DE FALLO A: {}", userId);
-        log.info("**************************************************");
-        log.info("Asunto: Problema con tu reserva");
-        log.info("Reserva #{} CANCELADA", bookingId);
-        log.info("Mensaje: Lo sentimos, no hemos podido procesar tu pago. Tu reserva ha sido liberada.");
-        log.info("**************************************************");
+        log.warn("**************************************************");
+        log.warn("📧 SIMULANDO ENVÍO DE EMAIL → Usuario ID: {}", data.getUserId());
+        log.warn("   Asunto: Problema con tu reserva ⚠️");
+        log.warn("   Reserva #{} — CANCELADA ❌", data.getBookingId());
+        log.warn("   Evento ID: {} | Tipo de entrada ID: {} | Cantidad: {}",
+                data.getEventId(), data.getTicketTypeId(), data.getQuantity());
+        log.warn("   Mensaje: {}", data.getMessage());
+        log.warn("**************************************************");
     }
-
 }
