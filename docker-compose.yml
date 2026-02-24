@@ -13,6 +13,12 @@ services:
       - events_data:/var/lib/postgresql/data
     networks:
       - ticket-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d events_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # Database for Booking Service
   db-bookings:
@@ -28,8 +34,35 @@ services:
       - bookings_data:/var/lib/postgresql/data
     networks:
       - ticket-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d bookings_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
-  # Redis for Caching and Distributed Locks
+  # Database for Users Service
+  db-users:
+    image: postgres:15-alpine
+    container_name: ticket-db-users
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: users_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - users_data:/var/lib/postgresql/data
+    networks:
+      - ticket-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d users_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Redis for Caching and Rate Limiting
   redis:
     image: redis:7-alpine
     container_name: ticket-redis
@@ -40,6 +73,12 @@ services:
       - redis_data:/data
     networks:
       - ticket-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   # RabbitMQ for Event Bus
   rabbitmq:
@@ -55,20 +94,32 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - ticket-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
 
   # Discovery Service (Eureka Server)
   discovery-service:
-    build: 
+    build:
       context: ./services/discovery-service
     container_name: ticket-discovery
     ports:
       - "8761:8761"
     networks:
       - ticket-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   # API Gateway
   gateway-service:
-    build: 
+    build:
       context: ./services/gateway-service
     container_name: ticket-gateway
     environment:
@@ -78,7 +129,10 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - discovery-service
+      discovery-service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - ticket-network
 
@@ -97,8 +151,10 @@ services:
     ports:
       - "8081:8081"
     depends_on:
-      - db-events
-      - discovery-service
+      db-events:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
     networks:
       - ticket-network
 
@@ -122,10 +178,14 @@ services:
     ports:
       - "8082:8082"
     depends_on:
-      - db-bookings
-      - redis
-      - rabbitmq
-      - discovery-service
+      db-bookings:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
     networks:
       - ticket-network
 
@@ -142,8 +202,10 @@ services:
     ports:
       - "8083:8083"
     depends_on:
-      - rabbitmq
-      - discovery-service
+      rabbitmq:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
     networks:
       - ticket-network
 
@@ -160,23 +222,10 @@ services:
     ports:
       - "8085:8085"
     depends_on:
-      - rabbitmq
-      - discovery-service
-    networks:
-      - ticket-network
-
-  # Database for Users Service
-  db-users:
-    image: postgres:15-alpine
-    container_name: ticket-db-users
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: users_db
-    ports:
-      - "5434:5432"
-    volumes:
-      - users_data:/var/lib/postgresql/data
+      rabbitmq:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
     networks:
       - ticket-network
 
@@ -196,8 +245,10 @@ services:
     ports:
       - "8084:8084"
     depends_on:
-      - db-users
-      - discovery-service
+      db-users:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
     networks:
       - ticket-network
 

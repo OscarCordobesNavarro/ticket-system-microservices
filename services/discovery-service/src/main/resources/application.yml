@@ -1,11 +1,25 @@
 server:
   port: 8761
 
+spring:
+  application:
+    name: discovery-service
+
 eureka:
   client:
     register-with-eureka: false
     fetch-registry: false
   server:
     wait-time-in-ms-when-sync-empty: 0
-    eviction-interval-timer-in-ms: 8000 # Escanea servicios caídos cada 2s
-    response-cache-update-interval-ms: 8000 # Actualiza la caché de servicios cada 2s
+    eviction-interval-timer-in-ms: 8000 # Escanea servicios caídos cada 8s
+    response-cache-update-interval-ms: 8000 # Actualiza la caché de servicios cada 8s
+
+# Exponer el endpoint de health para el healthcheck de Docker Compose
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
