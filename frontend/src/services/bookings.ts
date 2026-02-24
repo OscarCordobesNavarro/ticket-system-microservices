@@ -20,4 +20,9 @@ export const fetchStock = async (eventId: number, ticketTypeId: number): Promise
     return data;
 };
 
+export const fetchBookingById = async (id: string): Promise<BookingResponse> => {
+    const { data } = await api.get<BookingResponse>(`/booking/api/bookings/${id}`);
+    return data;
+};
+
 export default api;

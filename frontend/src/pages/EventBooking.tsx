@@ -1,21 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { fetchEventById } from '../services/events';
-import { createBooking } from '../services/bookings';
+import { createBooking, fetchBookingById } from '../services/bookings';
 import { EventDate } from '../models/event';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import FeedbackModal from '../components/FeedbackModal';
+import BookingStatusModal from '../components/BookingStatusModal';
+import { type BookingStatus } from '../components/BookingStatusModal';
 
 const EventBooking: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [quantity, setQuantity] = useState(1);
     const [selectedTicketTypeId, setSelectedTicketTypeId] = useState<number | null>(null);
-    const [showSuccessModal, setShowSuccessModal] = useState(false);
-    const [showErrorModal, setShowErrorModal] = useState(false);
-    const [errorMessage, setErrorMessage] = useState('');
+
+    // Status Modal State
+    const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+    const [bookingStatus, setBookingStatus] = useState<BookingStatus>('PENDING');
+
+    const pollingIntervalRef = useRef<any>(null);
+    const timeoutRef = useRef<any>(null);
 
     const { data: event, isLoading, isError } = useQuery({
         queryKey: ['event', id],
@@ -25,21 +30,86 @@ const EventBooking: React.FC = () => {
 
     const mutation = useMutation({
         mutationFn: createBooking,
-        onSuccess: () => {
-            setShowSuccessModal(true);
+        onSuccess: (data: any) => {
+            const bId = data.id || data.bookingId;
+
+            if (bId) {
+                setBookingStatus('PENDING');
+                setIsStatusModalOpen(true);
+                startPolling(String(bId));
+            } else {
+                console.error('No se encontró ID en la respuesta:', data);
+                setBookingStatus('CANCELLED');
+                setIsStatusModalOpen(true);
+            }
         },
         onError: (error: any) => {
-            setErrorMessage(error.response?.data?.message || 'Hubo un problema al procesar tu reserva.');
-            setShowErrorModal(true);
+            console.error('Error al crear la reserva:', error);
+            setBookingStatus('CANCELLED');
+            setIsStatusModalOpen(true);
         }
     });
 
+    const startPolling = (bookingId: string) => {
+        if (!bookingId || bookingId === 'undefined') {
+            console.error('bookingId inválido para el polling');
+            return;
+        }
+        // Clear any existing polling/timeouts
+        if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+        // Security Timeout: 60 seconds
+        timeoutRef.current = setTimeout(() => {
+            stopPolling();
+            if (bookingStatus === 'PENDING') {
+                setBookingStatus('TIMEOUT');
+            }
+        }, 60000);
+
+        // Polling every 2 seconds
+        pollingIntervalRef.current = setInterval(async () => {
+            try {
+                const response = await fetchBookingById(bookingId);
+                const status = response.status as BookingStatus;
+
+                if (status !== 'PENDING') {
+                    setBookingStatus(status);
+                    stopPolling();
+                }
+            } catch (error) {
+                console.error('Error polling booking status:', error);
+                // On error, we might want to continue polling or stop depending on the error type
+                // For now, let's keep polling unless the error is persistent
+            }
+        }, 2000);
+    };
+
+    const stopPolling = () => {
+        if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+        }
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+        }
+    };
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => stopPolling();
+    }, []);
+
     if (isLoading) {
         return (
-            <div className="min-h-screen flex flex-col bg-surface font-sans">
+            <div className="min-h-screen flex flex-col bg-slate-50 font-sans">
                 <Navbar />
-                <main className="flex-grow flex items-center justify-center text-white">
-                    Cargando detalles del evento...
+                <main className="flex-grow flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                        <p className="text-slate-600 font-medium">Cargando detalles del evento...</p>
+                    </div>
                 </main>
                 <Footer />
             </div>
@@ -48,9 +118,9 @@ const EventBooking: React.FC = () => {
 
     if (isError || !event) {
         return (
-            <div className="min-h-screen flex flex-col bg-surface font-sans">
+            <div className="min-h-screen flex flex-col bg-slate-50 font-sans">
                 <Navbar />
-                <main className="flex-grow flex items-center justify-center text-white">
+                <main className="flex-grow flex items-center justify-center text-slate-800">
                     No se pudo cargar el evento.
                 </main>
                 <Footer />
@@ -262,28 +332,19 @@ const EventBooking: React.FC = () => {
                 <Footer />
             </div>
 
-            {/* Success Modal */}
-            <FeedbackModal
-                isOpen={showSuccessModal}
+            {/* Booking Status Modal */}
+            <BookingStatusModal
+                isOpen={isStatusModalOpen}
+                status={bookingStatus}
                 onClose={() => {
-                    setShowSuccessModal(false);
-                    navigate('/');
+                    setIsStatusModalOpen(false);
+                    if (bookingStatus === 'CANCELLED' || bookingStatus === 'EXPIRED') {
+                        // Keep user on the page to try again
+                    } else {
+                        navigate('/');
+                    }
                 }}
-                type="success"
-                title="¡Reserva Confirmada!"
-                message={`Hemos reservado ${quantity} entradas para ${event.artist}. Te hemos enviado un correo con los detalles.`}
-                actionLabel="Volver al inicio"
-                onAction={() => navigate('/')}
-            />
-
-            {/* Error Modal */}
-            <FeedbackModal
-                isOpen={showErrorModal}
-                onClose={() => setShowErrorModal(false)}
-                type="error"
-                title="Error en la Reserva"
-                message={errorMessage}
-                actionLabel="Intentar de nuevo"
+                onViewTickets={() => navigate('/')}
             />
         </div>
     );

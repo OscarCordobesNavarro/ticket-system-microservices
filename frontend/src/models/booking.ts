@@ -6,7 +6,7 @@ export interface BookingRequest {
 }
 
 export interface BookingResponse {
-    bookingId: string;
+    id: string;
     eventId: number;
     ticketTypeId: number;
     userId: string;
