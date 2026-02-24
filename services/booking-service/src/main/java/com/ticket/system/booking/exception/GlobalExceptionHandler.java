@@ -37,10 +37,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
     public ErrorMessage handleGeneralException(Exception ex, WebRequest request) {
+        ex.printStackTrace(); // Para los logs del contenedor
         return ErrorMessage.builder()
                 .statusCode(500)
                 .timestamp(LocalDateTime.now())
-                .message("Ocurrió un error inesperado en el sistema de reservas.")
+                .message("Error: " + ex.getMessage())
                 .description(request.getDescription(false))
                 .build();
     }
@@ -66,6 +67,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(EventNotFoundException.class)
     @ResponseStatus(value = HttpStatus.NOT_FOUND)
     public ErrorMessage handleEventNotFound(EventNotFoundException ex, WebRequest request) {
+        return ErrorMessage.builder()
+                .statusCode(HttpStatus.NOT_FOUND.value())
+                .timestamp(LocalDateTime.now())
+                .message(ex.getMessage())
+                .description(request.getDescription(false))
+                .build();
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    @ResponseStatus(value = HttpStatus.NOT_FOUND)
+    public ErrorMessage handleUserNotFound(UserNotFoundException ex, WebRequest request) {
         return ErrorMessage.builder()
                 .statusCode(HttpStatus.NOT_FOUND.value())
                 .timestamp(LocalDateTime.now())

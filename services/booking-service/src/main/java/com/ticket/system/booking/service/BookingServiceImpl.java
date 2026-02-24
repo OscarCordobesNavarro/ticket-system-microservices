@@ -1,10 +1,12 @@
 package com.ticket.system.booking.service;
 
 import com.ticket.system.booking.client.EventClient;
+import com.ticket.system.booking.client.UserClient;
 import com.ticket.system.booking.config.RabbitMQConfig;
 import com.ticket.system.booking.dto.*;
 import com.ticket.system.booking.exception.BookingNotFoundException;
 import com.ticket.system.booking.exception.NotEnoughStockException;
+import com.ticket.system.booking.exception.UserNotFoundException;
 import com.ticket.system.booking.model.Booking;
 import com.ticket.system.booking.model.BookingStatus;
 import com.ticket.system.booking.repository.BookingRepository;
@@ -28,10 +30,26 @@ public class BookingServiceImpl implements BookingService {
     private final StringRedisTemplate redisTemplate;
     private final RabbitTemplate rabbitTemplate;
     private final EventClient eventClient;
+    private final UserClient userClient;
 
     @Override
     @Transactional
     public BookingResponseDTO createBooking(BookingRequestDTO bookingRequest) {
+
+        // Validar usuario mediante el cliente Feign
+        log.info("Validando usuario con ID: {}", bookingRequest.getUserId());
+        try {
+            // Trim para evitar errores por espacios en el JSON
+            String cleanUserId = bookingRequest.getUserId().trim();
+            Boolean isValidUser = userClient.validateUser(Long.valueOf(cleanUserId));
+            
+            if (isValidUser == null || !isValidUser) {
+                throw new UserNotFoundException(Long.valueOf(cleanUserId));
+            }
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("El ID de usuario debe ser numérico. Valor recibido: [" + bookingRequest.getUserId() + "]");
+        }
+
         String stockKey = String.format("event:%d:ticket:%d:stock", bookingRequest.getEventId(),
                 bookingRequest.getTicketTypeId());
 
