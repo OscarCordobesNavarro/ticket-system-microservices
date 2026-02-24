@@ -1,12 +1,47 @@
 # 🔔 Notification Service
 
-El punto final del flujo de usuario exitoso.
+Último eslabón del flujo de usuario exitoso. Recibe la confirmación de pago y simula el **envío de la entrada digital** al usuario.
 
 ## 📄 Responsabilidades
-1. Escuchar los eventos de pago completado.
-2. Simular la emisión de un ticket digital al usuario.
 
-## 📡 Consumer
-Escucha la cola `notification.queue`, la cual está enlazada al Exchange global con la clave `payment.success`.
+1. **Consumir** eventos `payment.success` desde RabbitMQ.
+2. **Generar** un log estructurado que simula el envío del ticket digital.
 
-Al recibir el mensaje, el servicio genera un log visual con información detallada de la reserva para confirmar que el ciclo de vida del microservicio se ha cerrado satisfactoriamente.
+> En un entorno de producción, este servicio integraría un proveedor de email (SendGrid, AWS SES) o un sistema de generación de PDFs. Por ahora genera logs detallados para confirmar que el ciclo completo de la Saga se ha cerrado.
+
+## 📡 Comunicación RabbitMQ
+
+| Rol | Queue | Routing Key | Exchange |
+|---|---|---|---|
+| **Consume** | `notification.queue` | `payment.success` | `booking.exchange` |
+
+## 📦 Evento consumido: `NotificationEvent`
+
+```json
+{
+  "bookingId": 123,
+  "userId": 7,
+  "eventId": 45,
+  "quantity": 2,
+  "status": "CONFIRMED"
+}
+```
+
+## 📋 Log generado
+
+Al recibir el evento, el servicio genera un log del tipo:
+
+```
+🎟️ TICKET ENVIADO
+  Reserva #123 — Usuario #7
+  Evento #45 — 2 entrada(s)
+  Estado: CONFIRMED
+```
+
+## ⚙️ Variables de Entorno
+
+| Variable | Descripción |
+|---|---|
+| `RABBIT_HOST` / `RABBIT_PORT` | RabbitMQ host/puerto |
+| `RABBIT_USER` / `RABBIT_PASSWORD` | Credenciales RabbitMQ |
+| `EUREKA_HOST` | Eureka Server |

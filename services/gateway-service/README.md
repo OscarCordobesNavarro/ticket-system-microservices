@@ -1,23 +1,67 @@
-# 🚪 API Gateway Service (Punto de Entrada)
+# 🚪 API Gateway Service
 
-Basado en **Spring Cloud Gateway**, este servicio centraliza todas las comunicaciones externas del sistema en el puerto **8080**.
+Punto de entrada único del sistema, basado en **Spring Cloud Gateway** (WebFlux reactivo). Expuesto en el puerto **8080**.
 
-## 📄 Funcionalidades
-1. **Enrutamiento**: Deriva las peticiones al microservicio adecuado basándose en el prefijo de la URL.
-2. **Rate Limiting**: Protección contra ataques de denegación de servicio (DoS) o abuso de la API mediante un algoritmo de **Token Bucket** gestionado por Redis.
-3. **Abstracción**: El cliente no necesita saber cuántos servicios existen o en qué puertos corren.
-4. **StripPrefix**: Elimina el prefijo del Gateway (ej: `/catalog`) antes de pasar la petición al servicio final.
+## 📄 Responsabilidades
 
-## 🚦 Configuración del Rate Limiter
-El sistema utiliza **Redis** para mantener el estado del limitador de forma distribuida.
-- **KeyResolver**: Identifica a cada usuario por su dirección IP (`RemoteAddrKeyResolver`).
-- **Replenish Rate**: Cuántas fichas (peticiones) se añaden al "cubo" por segundo.
-- **Burst Capacity**: Capacidad máxima del "cubo" para permitir ráfagas puntuales.
-- **Respuesta**: Cuando se excede el límite, el Gateway devuelve un error **429 Too Many Requests**.
+1. **Autenticación JWT centralizada** — valida el token en cada petición antes de routear al servicio destino. Los servicios internos confían en los headers inyectados por el gateway, nunca revalidan el JWT.
+2. **Rate Limiting** — protección contra abuso y ataques DoS mediante algoritmo *Token Bucket* gestionado en Redis.
+3. **Enrutamiento inteligente** — descubre los servicios disponibles via Eureka (`lb://`) y elimina el prefijo de ruta antes de reenviar (`StripPrefix=1`).
+4. **CORS centralizado** — maneja los headers CORS para el frontend React en `localhost:5173`.
+5. **Swagger UI agregado** — sirve la documentación de todos los microservicios desde una única URL.
+
+## 🔒 Flujo de Autenticación JWT
+
+```
+Petición entrante
+  │
+  ├─ ¿Está en OPEN_PATHS? (/user/api/auth/login, /user/api/auth/register...)
+  │     └─ SÍ → pasa directamente al servicio destino
+  │
+  └─ NO → extrae Bearer token del header Authorization
+              ├─ Token válido → inyecta X-User-Id y X-User-Name en la request
+              │                 y enruta al servicio
+              └─ Token inválido/ausente → 401 Unauthorized
+```
+
+Los servicios destino leen `X-User-Id` y `X-User-Name` mediante su `GatewayHeaderAuthFilter` local.
+
+## 🚦 Rate Limiter por Servicio
+
+| Servicio | Replenish Rate | Burst Capacity |
+|---|---|---|
+| `catalog-service` | 2 req/s | 10 |
+| `booking-service` | 1 req/s | 2 |
+| `user-service` | 5 req/s | 20 |
+
+- **KeyResolver**: dirección IP remota (`RemoteAddrKeyResolver`)
+- **Respuesta al exceder**: `429 Too Many Requests` (con retry automático 1s en el frontend)
 
 ## 📍 Rutas Configuradas
-...
-(el resto de la tabla)
 
-## ⚙️ Integración con Eureka
-...
+| Prefijo entrante | Servicio destino | Ruta efectiva |
+|---|---|---|
+| `/catalog/**` | `lb://CATALOG-SERVICE` | `/**` (StripPrefix=1) |
+| `/booking/**` | `lb://BOOKING-SERVICE` | `/**` (StripPrefix=1) |
+| `/user/**` | `lb://USER-SERVICE` | `/**` (StripPrefix=1) |
+
+## ⚠️ Spring Security en Gateway (WebFlux)
+
+`springdoc-openapi-starter-webflux-ui` trae Spring Security como dependencia transitiva. Sin configuración explícita, la auto-configuración reactiva habilita CSRF, bloqueando todos los POST con 403.
+
+Se ha añadido un `SecurityConfig` que:
+- Deshabilita CSRF (API stateless, sin sesiones)
+- Permite todos los exchanges (`anyExchange().permitAll()`)
+
+La autenticación real la gestiona el `JwtAuthenticationFilter` (GlobalFilter, order=-1).
+
+## 🌐 Swagger UI Centralizado
+
+```
+http://localhost:8080/swagger-ui.html
+```
+
+Agrega la documentación OpenAPI de:
+- **Catalog Service** → `/catalog/v3/api-docs`
+- **Booking Service** → `/booking/v3/api-docs`
+- **User Service** → `/user/v3/api-docs`

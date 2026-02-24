@@ -1,73 +1,102 @@
-# React + TypeScript + Vite
+# 🖥️ Frontend — Ticket System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación cliente construida con **React 19 + TypeScript + Vite**. Se comunica exclusivamente con el **API Gateway** en `http://localhost:8080`.
 
-Currently, two official plugins are available:
+## 🛠️ Stack Tecnológico
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+| Tecnología | Uso |
+|---|---|
+| **React 19** | UI framework |
+| **TypeScript** | Tipado estático |
+| **Vite** | Bundler y dev server (HMR) |
+| **TailwindCSS** | Estilos utility-first |
+| **TanStack Query** | Server state management (fetch, cache, polling) |
+| **React Router v6** | Enrutamiento SPA |
+| **Axios** | Cliente HTTP con interceptores |
 
-## React Compiler
+## 🗂️ Estructura
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+src/
+├── components/
+│   ├── ProtectedRoute.tsx    # Guardia de rutas (verifica token + isLoading)
+│   └── AccountLayout.tsx     # Layout para páginas de cuenta
+├── context/
+│   └── AuthContext.tsx       # Estado global de autenticación + triggerLogout
+├── models/
+│   └── booking.ts            # Tipos TypeScript (userId: number, id: number)
+├── pages/
+│   ├── Login.tsx             # Formulario de login
+│   ├── Register.tsx          # Formulario de registro
+│   ├── Home.tsx              # Catálogo de eventos
+│   ├── EventBooking.tsx      # Reserva + polling de estado
+│   └── MyTickets.tsx         # Mis reservas
+└── services/
+    ├── api.ts                # Axios instance + interceptores globales
+    ├── auth.ts               # login() y register()
+    ├── bookings.ts           # CRUD de reservas
+    └── events.ts             # Consulta de eventos
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🔒 Gestión de Autenticación
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### `AuthContext.tsx`
+- Valida la **expiración del JWT** al montar (decodifica `exp` sin librería externa).
+- Expone `isLoading: true` mientras se verifica el token del localStorage → evita flash de redirección.
+- Expone `triggerLogout()` para que `api.ts` pueda invocar el logout fuera del árbol React.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### `api.ts` — Interceptores Axios
+
+**Request interceptor:**
+```
+Token en localStorage + ruta NO es /api/auth/ → añade Authorization: Bearer <token>
+Ruta /api/auth/ (login/register)              → NO añade token
+```
+> Razón: enviar un token expirado en la petición de login haría que el filtro JWT del backend la rechazara con 403.
+
+**Response interceptor:**
+| Status | Acción |
+|---|---|
+| `401` | `triggerLogout()` + redirect a `/login` (si no es ruta de auth) |
+| `403` | Warning en consola + alert de acceso denegado (solo en rutas no-auth) |
+| `429` | Retry automático tras 1 segundo |
+
+### `ProtectedRoute.tsx`
+- Muestra spinner si `isLoading === true` (AuthContext verificando token)
+- Redirige a `/login` si `isAuthenticated === false`
+- Renderiza el outlet si autenticado
+
+## 🔄 Flujo de Reserva (EventBooking + Polling)
+
+```
+1. Usuario selecciona entradas → POST /booking/api/bookings
+2. Booking creado con status PENDING
+3. Inicia polling cada 2s → GET /booking/api/bookings/{id}
+4. Cuando status cambia a CONFIRMED/CANCELLED/EXPIRED → para el polling
+5. Muestra resultado al usuario
+```
+
+## 🚀 Desarrollo local
+
+```bash
+cd frontend
+npm install
+npm run dev
+# → http://localhost:5173
+```
+
+## 📦 Build de producción
+
+```bash
+npm run build
+# Output en /dist
+```
+
+## ⚙️ Configuración
+
+La URL base del API está en `src/services/api.ts`:
+```ts
+const api = axios.create({
+    baseURL: 'http://localhost:8080', // API Gateway
+});
 ```
