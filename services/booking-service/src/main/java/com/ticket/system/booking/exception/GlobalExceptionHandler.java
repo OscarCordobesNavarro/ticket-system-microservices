@@ -85,4 +85,15 @@ public class GlobalExceptionHandler {
                 .description(request.getDescription(false))
                 .build();
     }
+
+    @ExceptionHandler(InvalidBookingStatusException.class)
+    @ResponseStatus(value = HttpStatus.CONFLICT)
+    public ErrorMessage handleInvalidBookingStatus(InvalidBookingStatusException ex, WebRequest request) {
+        return ErrorMessage.builder()
+                .statusCode(HttpStatus.CONFLICT.value())
+                .timestamp(LocalDateTime.now())
+                .message(ex.getMessage())
+                .description(request.getDescription(false))
+                .build();
+    }
 }
