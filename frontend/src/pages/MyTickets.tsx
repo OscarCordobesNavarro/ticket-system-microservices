@@ -98,7 +98,7 @@ const MyTickets: React.FC = () => {
     const { user } = useAuth();
     const { data: bookings, isLoading } = useQuery({
         queryKey: ['user-bookings', user?.userId],
-        queryFn: () => fetchBookingsByUserId(String(user?.userId)),
+        queryFn: () => fetchBookingsByUserId(user!.userId),
         enabled: !!user?.userId,
     });
 

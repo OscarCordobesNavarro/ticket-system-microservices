@@ -11,12 +11,12 @@ export const fetchStock = async (eventId: number, ticketTypeId: number): Promise
     return data;
 };
 
-export const fetchBookingById = async (id: string): Promise<BookingResponse> => {
+export const fetchBookingById = async (id: number): Promise<BookingResponse> => {
     const { data } = await api.get<BookingResponse>(`/booking/api/bookings/${id}`);
     return data;
 };
 
-export const fetchBookingsByUserId = async (userId: string): Promise<BookingResponse[]> => {
+export const fetchBookingsByUserId = async (userId: number): Promise<BookingResponse[]> => {
     const { data } = await api.get<BookingResponse[]>(`/booking/api/bookings/user/${userId}`);
     return data;
 };

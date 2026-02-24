@@ -38,7 +38,7 @@ const EventBooking: React.FC = () => {
             if (bId) {
                 setBookingStatus('PENDING');
                 setIsStatusModalOpen(true);
-                startPolling(String(bId));
+                startPolling(bId);
             } else {
                 console.error('No se encontró ID en la respuesta:', data);
                 setBookingStatus('CANCELLED');
@@ -52,8 +52,8 @@ const EventBooking: React.FC = () => {
         }
     });
 
-    const startPolling = (bookingId: string) => {
-        if (!bookingId || bookingId === 'undefined') {
+    const startPolling = (bookingId: number) => {
+        if (!bookingId) {
             console.error('bookingId inválido para el polling');
             return;
         }
@@ -148,7 +148,7 @@ const EventBooking: React.FC = () => {
         mutation.mutate({
             eventId: Number(id),
             ticketTypeId: selectedTicketTypeId,
-            userId: String(user.userId),
+            userId: user.userId,
             quantity: quantity
         });
     };
