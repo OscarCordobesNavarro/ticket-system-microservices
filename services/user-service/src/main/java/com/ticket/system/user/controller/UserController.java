@@ -1,8 +1,11 @@
 package com.ticket.system.user.controller;
 
 import com.ticket.system.user.dto.UserDTO;
-import com.ticket.system.user.model.User;
-import com.ticket.system.user.repository.UserRepository;
+import com.ticket.system.user.service.UserService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,29 +16,23 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
+@Tag(name = "Users", description = "API para consulta de datos de usuario")
 public class UserController {
 
-    private final UserRepository userRepository;
+    private final UserService userService;
 
     @GetMapping("/{id}")
+    @Operation(summary = "Obtener usuario por ID")
+    @ApiResponse(responseCode = "200", description = "Usuario encontrado")
+    @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     public ResponseEntity<UserDTO> getUserById(@PathVariable Long id) {
-        return userRepository.findById(id)
-                .map(this::convertToDTO)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(userService.getUserById(id));
     }
 
     @GetMapping("/validate/{id}")
+    @Operation(summary = "Validar si un usuario existe", description = "Usado internamente por booking-service vía Feign")
+    @ApiResponse(responseCode = "200", description = "Resultado de la validación")
     public ResponseEntity<Boolean> validateUser(@PathVariable Long id) {
-        return ResponseEntity.ok(userRepository.existsById(id));
-    }
-
-    private UserDTO convertToDTO(User user) {
-        return UserDTO.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .role(user.getRole().name())
-                .build();
+        return ResponseEntity.ok(userService.validateUser(id));
     }
 }
