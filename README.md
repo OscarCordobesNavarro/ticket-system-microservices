@@ -1,86 +1,100 @@
-# 🎫 Ticket System Microservices
+# 🎟️ Ticket System Microservices
 
-Sistema distribuido de alto rendimiento para la reserva y venta de entradas en eventos de alta demanda. Implementado con una arquitectura de microservicios robusta, asíncrona y escalable.
-
-## 🚀 Características Principales
-- **Arquitectura Event-Driven**: Comunicación asíncrona mediante RabbitMQ.
-- **Transacciones Distribuidas**: Implementación del **Patrón Saga (Coreografía)** para asegurar la consistencia.
-- **Alta Concurrencia**: Gestión de stock atómica con **Redis** para evitar sobreventa.
-- **Resiliencia y Validación**: Comunicación síncrona entre servicios con **OpenFeign** y manejo centralizado de errores con **ErrorDecoder**.
-- **Seguridad de Tráfico**: Protección contra abuso mediante **Rate Limiting** basado en Redis en el Gateway.
-- **Cloud Native**: Despliegue completo con Docker Compose y Service Discovery (Eureka).
-- **Entrada Única**: API Gateway centralizado para enrutamiento y balanceo.
-
----
+Este proyecto es una arquitectura de microservicios robusta y escalable para la gestión de venta de entradas, diseñada bajo los principios de **Clean Architecture**, **Event-Driven Design** y **Cloud Native**.
 
 ## 🏗️ Arquitectura del Sistema
 
-El sistema se compone de 6 microservicios y 4 componentes de infraestructura:
+El sistema utiliza una arquitectura de microservicios donde cada servicio es responsable de una única capacidad de negocio y gestiona su propia base de datos.
 
-- **Gateway (8080)**: Punto de entrada único.
-- **Discovery (8761)**: Servidor de registro Eureka.
-- **Catalog Service (8081)**: Gestión de eventos y artistas.
-- **Booking Service (8082)**: Gestión de reservas y stock crítico.
-- **Payment Service (8083)**: Procesamiento de pagos asíncrono.
-- **Notification Service (8085)**: Envío de confirmaciones.
+```mermaid
+graph TD
+    Gateway[API Gateway - Port 8080]
+    Discovery[Discovery Service - Eureka]
+    
+    User[User Service - Auth & Profile]
+    Catalog[Catalog Service - Events & Stock]
+    Booking[Booking Service - Reservations]
+    Payment[Payment Service - Transactions]
+    Notification[Notification Service - Emails]
+    
+    DB_User[(PostgreSQL - Users)]
+    DB_Catalog[(PostgreSQL - Catalog)]
+    DB_Booking[(PostgreSQL - Booking)]
+    
+    Redis[(Redis - Distributed Locks/Cache)]
+    RabbitMQ((RabbitMQ - Event Bus))
 
-> [!TIP]
-> Puedes ver los diagramas detallados de los flujos en [DIAGRAMS.md](./docs/DIAGRAMS.md).
+    subgraph "External"
+        Frontend[Vue/React Frontend]
+    end
 
----
+    Frontend --> Gateway
+    Gateway --> User
+    Gateway --> Catalog
+    Gateway --> Booking
+    
+    User <--> Discovery
+    Catalog <--> Discovery
+    Booking <--> Discovery
+    Payment <--> Discovery
+    Notification <--> Discovery
+    
+    User --- DB_User
+    Catalog --- DB_Catalog
+    Booking --- DB_Booking
+    
+    Booking --> Redis
+    Booking -- "Booking Created" --> RabbitMQ
+    RabbitMQ -- "Processing" --> Payment
+    Payment -- "Payment Confirmed" --> RabbitMQ
+    RabbitMQ -- "Update Status" --> Booking
+    RabbitMQ -- "Send Welcome/Ticket" --> Notification
+```
 
-## 🛠️ Guía de Inicio Rápido
+## 🛠️ Stack Tecnológico
 
-### Requisitos previos
-- Java 21+
-- Maven
+- **Backend:** Java 21, Spring Boot 3.4
+- **Microservicios:** Spring Cloud (Gateway, Eureka, OpenFeign)
+- **Seguridad:** JWT (JSON Web Token) con Stateless Authentication
+- **Bases de Datos:** PostgreSQL (una instancia por servicio)
+- **Mensajería:** RabbitMQ (Saga Pattern para transacciones distribuidas)
+- **Rendimiento:** Redis (Control de concurrencia y stock en tiempo real)
+- **Infraestructura:** Docker & Docker Compose
+- **Migraciones:** Flyway
+
+## 🚀 Guía de Inicio Rápido
+
+### Requisitos
 - Docker y Docker Compose
+- Java 21 & Maven (para compilar)
 
-### 1. Compilación
-Genera los artefactos de todos los servicios:
-```bash
-mvn clean package -DskipTests
-```
+### Instalación y Despliegue
+1. **Compilar el proyecto:**
+   ```bash
+   mvn clean package -DskipTests
+   ```
+2. **Levantar la infraestructura:**
+   ```bash
+   docker-compose up --build -d
+   ```
+3. **Acceder a la documentación:**
+   - **Gateway (Swagger):** `http://localhost:8080/swagger-ui.html`
+   - **Eureka (Panel):** `http://localhost:8761`
 
-### 2. Despliegue
-Levanta toda la infraestructura y servicios con Docker:
-```bash
-sudo docker compose up --build -d
-```
+## 📖 Documentación de API
 
-### 3. Verificación
-Comprueba que todos los servicios están registrados en Eureka:
-[http://localhost:8761](http://localhost:8761)
+Hemos centralizado toda la documentación en el **API Gateway**. Puedes consultar los contratos de todos los servicios desde una única interfaz:
 
----
+1. Inicia el sistema completo.
+2. Abre tu navegador en `http://localhost:8080/swagger-ui.html`.
+3. Selecciona el servicio que deseas consultar en el desplegable superior derecho.
 
-## ⚡ Guía de Uso de la API (vía Gateway 8080)
+## 🔒 Seguridad e Integración
 
-### 1. Listar Eventos
-`GET http://localhost:8080/catalog/api/events`
-
-### 2. Inicializar Stock
-`PUT http://localhost:8080/booking/api/bookings/stock?eventId=1&ticketTypeId=1&quantity=100`
-
-### 3. Crear una Reserva
-`POST http://localhost:8080/booking/api/bookings`
-```json
-{
-  "eventId": 1,
-  "ticketTypeId": 1,
-  "userId": "tester",
-  "quantity": 2
-}
-```
+El sistema utiliza un flujo de seguridad basado en JWT. 
+1. El **User Service** emite tokens tras el login/registro.
+2. El **Gateway** aplica Rate Limiting para proteger el sistema.
+3. El **Booking Service** valida la identidad del usuario contra su ID interno y la firma del JWT.
 
 ---
-
-## 📚 Documentación Detallada
-Hemos preparado guías profundas para cada aspecto del sistema:
-
-- 🌐 [Visión General de la Arquitectura](./docs/GENERAL_OVERVIEW.md)
-- ⚔️ [Implementación del Patrón Saga](./docs/SAGA_PATTERN.md)
-- 🐳 [Guía de Infraestructura y Docker](./docs/INFRASTRUCTURE.md)
-- 📊 [Diagramas de Secuencia y Componentes](./docs/DIAGRAMS.md)
-
----
+*Desarrollado como proyecto de portfolio para demostrar el manejo de arquitecturas distribuidas, consistencia eventual y alta disponibilidad.*
