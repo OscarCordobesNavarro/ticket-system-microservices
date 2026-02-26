@@ -10,55 +10,96 @@ Sistema de venta de entradas para eventos y conciertos, construido como arquitec
 
 ```
                         ┌─────────────────────────────┐
-                        │   React Frontend (Vite)      │
-                        │   http://localhost:5173       │
+                        │   React Frontend (Vite)     │
+                        │   http://localhost:5173     │
                         └─────────────┬───────────────┘
                                       │ HTTP
                         ┌─────────────▼───────────────┐
-                        │    API Gateway  :8080         │
-                        │  JWT Validation + Rate Limit  │
-                        └──┬──────┬────────┬──────────┘
-                           │      │        │   (lb:// via Eureka)
+                        │    API Gateway  :8080       │
+                        │  JWT Validation + Rate Limit│
+                        └──┬──────┬───────┬───────────┘
+                           │      │       │   (lb:// via Eureka)
               ┌────────────▼┐  ┌──▼────┐ ┌▼──────────┐
-              │ User Service │  │Catalog│ │  Booking  │
-              │     :8081    │  │:8083  │ │  :8082    │
-              └─────┬────────┘  └──┬────┘ └─────┬─────┘
+              │ User Service│  │Catalog│ │  Booking  │
+              │     :8081   │  │:8083  │ │  :8082    │
+              └─────┬───────┘  └──┬────┘ └─────┬─────┘
                     │              │             │
-              ┌─────▼─┐      ┌─────▼─┐    ┌─────▼──────────────────┐
-              │users_db│     │events │    │  bookings_db (Postgres) │
-              │(Postgres)    │  _db  │    │  Redis (stock/locks)    │
-              └────────┘     └───────┘    └──────────┬──────────────┘
+              ┌─────▼──┐     ┌─────▼─┐    ┌─────▼──────────────────┐
+              │users_db│     │events │    │  bookings_db (Postgres)│
+              │        │     │  _db  │    │  Redis (stock/locks)   │
+              └────────┘     └───────┘    └──────────┬─────────────┘
                                                      │ RabbitMQ
                                     ┌────────────────▼──────────────┐
-                                    │  payment-service (saga step)   │
+                                    │  payment-service (saga step)  │
                                     └────────────────┬──────────────┘
                                                      │ RabbitMQ
                                     ┌────────────────▼──────────────┐
-                                    │  notification-service (email)  │
+                                    │  notification-service (email) │
                                     └───────────────────────────────┘
 ```
 
 ### Diagrama Mermaid
 
 ```mermaid
-graph TD
-    FE[React Frontend :5173] --> GW[API Gateway :8080]
-    GW -->|JWT validated| US[User Service :8081]
-    GW -->|JWT validated| CS[Catalog Service :8083]
-    GW -->|JWT validated| BS[Booking Service :8082]
+graph TB
+    subgraph Client_Layer [Capa de Cliente]
+        FE["💻 React Frontend (Vite)"]
+    end
 
-    US --- DB_U[(PostgreSQL - users_db)]
-    CS --- DB_C[(PostgreSQL - events_db)]
-    BS --- DB_B[(PostgreSQL - bookings_db)]
-    BS --- RD[(Redis)]
+    subgraph Entry_Layer [Entrada y Descubrimiento]
+        GW["🛡️ API Gateway (Spring Cloud)"]
+        EUR["🔍 Eureka Server"]
+    end
 
-    BS -->|booking.created| MQ((RabbitMQ))
-    MQ -->|booking.payment.queue| PS[Payment Service]
-    PS -->|payment.success / booking.failed| MQ
-    MQ -->|notification.queue| NS[Notification Service]
-    MQ -->|booking.failed.queue| BS
+    subgraph Core_Services [Servicios de Dominio]
+        direction LR
+        US["👤 User Service<br/>(Auth/JWT)"]
+        CS["🎫 Catalog Service<br/>(Eventos)"]
+        BS["📅 Booking Service<br/>(Reservas)"]
+    end
 
-    ALL_SVC[Todos los servicios] <--> EUR[Eureka Discovery :8761]
+    subgraph Infrastructure [Persistencia y Estado]
+        DB_U[("🗄️ users_db<br/>(PostgreSQL)")]
+        DB_C[("🗄️ events_db<br/>(PostgreSQL)")]
+        DB_B[("🗄️ bookings_db<br/>(PostgreSQL)")]
+        RD[("⚡ Redis<br/>(Stock Atómico)")]
+    end
+
+    subgraph Message_Bus [Bus de Eventos]
+        MQ(("📬 RabbitMQ"))
+    end
+
+    subgraph Workers [Procesamiento Asíncrono]
+        PS["💳 Payment Service"]
+        NS["🔔 Notification Service"]
+    end
+
+    %% Relaciones de Entrada
+    FE ==>|HTTPS| GW
+    GW -.->|LB & Auth| Core_Services
+    Core_Services <==>|Registry| EUR
+
+    %% Relaciones de Datos
+    US --- DB_U
+    CS --- DB_C
+    BS --- DB_B
+    BS --- RD
+
+    %% Flujo Saga (Numerado para claridad)
+    BS -- "1. booking.created" --> MQ
+    MQ -- "2. payment.queue" --> PS
+    PS -- "3. payment.result" --> MQ
+    MQ -- "4. notification.queue" --> NS
+    MQ -. "5. Compensating (si falla)" .-> BS
+
+    %% Estilos
+    style GW fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    style EUR fill:#e1f5fe,stroke:#01579b
+    style MQ fill:#f1f8e9,stroke:#33691e,stroke-width:2px
+    style RD fill:#fff3e0,stroke:#e65100
+    style DB_U fill:#ede7f6,stroke:#311b92
+    style DB_C fill:#ede7f6,stroke:#311b92
+    style DB_B fill:#ede7f6,stroke:#311b92
 ```
 
 ---
