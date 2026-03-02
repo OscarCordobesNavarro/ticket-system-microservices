@@ -1,8 +1,8 @@
 # 🎟️ Ticket System — Microservices Architecture
 
-Sistema de venta de entradas para eventos y conciertos, construido como arquitectura de microservicios de referencia. Diseñado bajo principios de **Clean Architecture**, **Event-Driven Design** y **Zero-Trust Security**.
+Sistema de venta de entradas a modo de practica sobre microservicios utilizando SpringBoot
 
-> 📌 Proyecto de portfolio que demuestra: autenticación centralizada JWT, saga pattern con RabbitMQ, control de stock en tiempo real con Redis y frontend React desacoplado.
+
 
 ---
 
@@ -123,21 +123,6 @@ graph TB
 
 ---
 
-## 🔒 Flujo de Seguridad
-
-El sistema implementa un modelo de **seguridad centralizada en el Gateway** con Zero-Trust entre microservicios internos:
-
-```
-1. [Login/Register] → User Service emite JWT con claims: sub, userId, role
-2. [Petición protegida] → Gateway valida JWT con secret compartido
-3. [Si válido] → Gateway inyecta headers: X-User-Id, X-User-Name
-4. [Microservicios internos] → Leen GatewayHeaderAuthFilter (no revalidan JWT)
-5. [Autorización] → Cada servicio comprueba X-User-Id vs recurso solicitado
-```
-
-> **¿Por qué 401 en credenciales incorrectas?**  
-> Spring Security 6 cambió el `AuthenticationEntryPoint` por defecto a `Http403ForbiddenEntryPoint`. Se ha configurado explícitamente `HttpStatus.UNAUTHORIZED` para seguir la semántica HTTP correcta.
-
 ### Rutas públicas (sin token)
 | Ruta | Método | Descripción |
 |---|---|---|
@@ -240,5 +225,3 @@ Usuario → POST /booking/api/bookings
 ```
 
 ---
-
-*Desarrollado como proyecto de portfolio — arquitecturas distribuidas, consistencia eventual y seguridad Zero-Trust.*
